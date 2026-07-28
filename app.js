@@ -1,0 +1,479 @@
+window.onerror = function(msg) {
+  document.getElementById('loading-tag').textContent = '⚠ ' + msg;
+  return false;
+};
+
+// ============================================================
+// CONFIGURATION API — Apps Script backend
+// ============================================================
+const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby8xjgcmphN3uhq7TbXwRaai2xsrNroM8wMetaQpmKOsprC0hjLZ9WPvdsokGIAHsC3/exec';
+const API_TOKEN = 'ezafzgerhgerdsfefe4fef4e5de5dfef74ezDF634EFCE879E';
+
+function apiGet(action) {
+  return fetch(API_BASE_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(API_TOKEN))
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+      if (!json.success) throw new Error(json.error || 'Erreur API');
+      return json.data;
+    });
+}
+
+function apiPost(action, payload) {
+  const body = Object.assign({}, payload, { token: API_TOKEN });
+  return fetch(API_BASE_URL + '?action=' + encodeURIComponent(action), {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  })
+    .then(function(r) { return r.json(); })
+    .then(function(json) {
+      if (!json.success) throw new Error(json.error || 'Erreur API');
+      return json.data;
+    });
+}
+
+// ============================================================
+// CHARGEMENT INITIAL
+// ============================================================
+apiGet('getComptesData').then(render).catch(onError);
+
+function fmtEUR(v) {
+  if (v === '' || v === undefined || v === null) return '—';
+  const n = Number(v);
+  if (isNaN(n)) return String(v);
+  return n.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €';
+}
+
+function iconFor(label) {
+  const l = (label || '').toLowerCase();
+  if (l.includes('lep')) return '📙';
+  if (l.includes('livret') || l.includes('csl') || l.includes('ldds')) return '📘';
+  if (l.includes('cash de secours')) return '💵';
+  if (l.includes('fonds €') || l.includes('assurance')) return '🛡️';
+  if (l.includes('gold') || l.includes('lingotin')) return '🥇';
+  if (l.includes('scpi')) return '🏢';
+  if (l.includes('obligation')) return '📜';
+  if (l.includes('résidence') || l.includes('prêt immobilier') || l.includes('mensualité')) return '🏠';
+  if (l.includes('locatif')) return '🏘️';
+  if (l.includes('climat') || l.includes('ingerop')) return '📊';
+  if (l.includes('msci') || l.includes('invexo')) return '📈';
+  if (l.includes('pea')) return '📊';
+  if (l.includes('cto') || l.includes('actions')) return '📈';
+  if (l.includes('private equity')) return '🚀';
+  if (l.includes('crowdlending') || l.includes('créances')) return '🤝';
+  if (l.includes('crypto') || l.includes('bitcoin') || l.includes('ethereum')) return '🪙';
+  if (l.includes('bnp') || l.includes('bourso') || l.includes('boursorama') || l.includes('trade republic') || l.includes('liquidité')) return '🏦';
+  return '💼';
+}
+
+function navTo(screenId, btn) {
+  showScreen(screenId);
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function render(data) {
+  try {
+    document.getElementById('loading-tag').textContent = data.nomFichier;
+    document.getElementById('sub-title').textContent = 'Adrien & Selma';
+
+    document.getElementById('valeur-nette').innerHTML = fmtEUR(data.kpis.valeurNette).replace(' €','') + ' <sup>€</sup>';
+    document.getElementById('liquidites').textContent = fmtEUR(data.kpis.liquidites);
+    document.getElementById('taux-epargne').textContent = data.kpis.tauxEpargne || '—';
+    const bilanEl = document.getElementById('bilan-assentis');
+    const bilanVal = Number(data.kpis.bilanAssentis);
+    bilanEl.textContent = fmtEUR(data.kpis.bilanAssentis);
+    bilanEl.style.color = (bilanVal < 0) ? 'var(--coral)' : '';
+    renderRoadmap(data.feuilleDeRoute || []);
+
+    let allocHtml = '';
+    (data.allocation.lignes || []).forEach(l => {
+      const pctNum = parseFloat(String(l.pct).replace('%','')) || 0;
+      allocHtml += `<div class="alloc-row">
+        <div class="alloc-top">
+          <div class="alloc-name"><span class="alloc-icon">${iconFor(l.placement)}</span>${l.placement}</div>
+          <div class="alloc-values">
+            <div class="alloc-amount">${fmtEUR(l.montant)}</div>
+            <div class="alloc-pct">${l.pct}</div>
+          </div>
+        </div>
+        <div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${pctNum}%"></div></div>
+      </div>`;
+    });
+    document.getElementById('allocation-container').innerHTML = allocHtml;
+
+    const bySection = {};
+    (data.comptes || []).forEach(c => {
+      if (!bySection[c.section]) bySection[c.section] = [];
+      bySection[c.section].push(c);
+    });
+    let html = '';
+    Object.keys(bySection).forEach(section => {
+      html += `<div class="section-title">${section}</div><div class="accounts">`;
+      bySection[section].forEach(c => {
+        html += `<div class="account-row">
+          <div class="acc-left"><div class="acc-icon">${iconFor(c.nom)}</div>
+            <div><div class="acc-name">${c.nom}</div></div></div>
+          <div class="acc-amount">${fmtEUR(c.valeur)}</div>
+        </div>`;
+      });
+      html += `</div>`;
+    });
+    document.getElementById('comptes-container').innerHTML = html;
+
+    let cryptoHtml = '';
+    (data.crypto || []).forEach(c => {
+      cryptoHtml += `<div class="crypto-chip">
+        <div class="sym">${c.actif}</div>
+        <div class="amt">${fmtEUR(c.valeur)}</div>
+        <div class="chg up">${c.solde} ${c.actif}</div>
+      </div>`;
+    });
+    document.getElementById('crypto-container').innerHTML = cryptoHtml;
+
+    let txHtml = '';
+    (data.dernieres || []).forEach(t => {
+      const isDep = t.type === 'Dépense';
+      const sign = isDep ? '−' : '+';
+      const color = isDep ? 'var(--coral)' : 'var(--sage)';
+      txHtml += `<div class="account-row">
+        <div class="acc-left"><div class="acc-icon">${isDep ? '💸' : '💶'}</div>
+          <div><div class="acc-name">${t.categorie}</div><div class="acc-sub">${t.date}</div></div></div>
+        <div class="acc-amount" style="color:${color}">${sign}${fmtEUR(t.montant).replace('−','').replace('+','')}</div>
+      </div>`;
+    });
+    document.getElementById('transactions-container').innerHTML = txHtml;
+
+    const compteSelect = document.getElementById('input-compte');
+    const comptesListe = data.comptesListe || [];
+    compteSelect.innerHTML = comptesListe.map(c => `<option value="${c}">${c}</option>`).join('');
+    const defaultCompte = comptesListe.find(c => c.toLowerCase().includes('trade republic'));
+    if (defaultCompte) compteSelect.value = defaultCompte;
+    if (!document.getElementById('input-date').value) {
+      document.getElementById('input-date').valueAsDate = new Date();
+    }
+    renderGroupesOuCategories();
+  } catch (e) {
+    document.getElementById('loading-tag').textContent = '⚠ render: ' + e.message;
+  }
+}
+
+function onError(err) {
+  document.getElementById('loading-tag').textContent = '⚠ ' + err.message;
+}
+
+let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
+
+function setType(t) {
+  saisieState.type = t;
+  saisieState.groupe = '';
+  document.getElementById('seg-dep').classList.toggle('active', t === 'Dépense');
+  document.getElementById('seg-rev').classList.toggle('active', t === 'Revenu');
+  renderGroupesOuCategories();
+}
+
+function renderGroupesOuCategories() {
+  const groupZone = document.getElementById('group-zone');
+  const chipZone = document.getElementById('chip-zone');
+
+  if (saisieState.type === 'Dépense') {
+    groupZone.style.display = '';
+    const groupes = Object.keys(CATEGORIES_DEPENSE_GROUPES);
+    document.getElementById('group-scroll').innerHTML = groupes.map(g => `
+      <div class="chip ${saisieState.groupe===g ? 'active':''}" data-groupe="${g}" onclick="selectGroupe(this)">
+        <div class="chip-stamp">${CATEGORIES_DEPENSE_GROUPES[g].icon}</div>
+        <div class="chip-label">${g}</div>
+      </div>`).join('');
+
+    if (!saisieState.groupe) {
+      chipZone.style.display = 'none';
+      document.getElementById('chip-scroll').innerHTML = '';
+      saisieState.categorie = '';
+    } else {
+      chipZone.style.display = '';
+      renderSousCategories(CATEGORIES_DEPENSE_GROUPES[saisieState.groupe].items);
+    }
+  } else {
+    groupZone.style.display = 'none';
+    chipZone.style.display = '';
+    renderSousCategories(CATEGORIES_REVENU);
+  }
+}
+
+function renderSousCategories(items) {
+  document.getElementById('chip-scroll').innerHTML = items.map((c, i) => `
+    <div class="chip ${i===0 ? 'active':''}" data-cat="${c}" onclick="selectChip(this)">
+      <div class="chip-stamp">${iconForCategorie(c)}</div>
+      <div class="chip-label">${c}</div>
+    </div>`).join('');
+  saisieState.categorie = items[0] || '';
+}
+
+function selectGroupe(el) {
+  document.querySelectorAll('#group-scroll .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  saisieState.groupe = el.getAttribute('data-groupe');
+  renderGroupesOuCategories();
+}
+
+function selectChip(el) {
+  document.querySelectorAll('#chip-scroll .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  saisieState.categorie = el.getAttribute('data-cat');
+}
+
+const EMOJI_CATEGORIES = {
+  'salaire adrien': '💶',
+  'salaire selma': '💶',
+  'revenus assentis': '💼',
+  'cpam': '⚕️',
+  'caf': '👶',
+  'ventes vinted / leboncoin': '🛍️',
+  'remboursement prêt étudiant': '🎓',
+  'cadeaux': '🎁',
+  'tickets restaurant (comptés à 60% ds le calcul)': '🍽️',
+  'cheques cesu (comptés à 70% ds le calcul)': '🍽️',
+  'autres revenus': '💰',
+  'charges de copropriété (durand immo)': '🏢',
+  'electricité (total energies)': '💡',
+  'gaz (total energies)': '🔥',
+  'mensualité prêt immobilier (bnp)': '🏠',
+  'assurance prêt (april)': '🛡️',
+  'assurance habitation (direct assurance)': '🏚️',
+  'taxe foncière': '🏛️',
+  'autres (logement)': '🏠',
+  'carburant': '⛽',
+  'train / avion / bus / taxi': '🚆',
+  'péage': '🛣️',
+  'stationnement': '🅿️',
+  'contraventions': '🚨',
+  'transports en commun': '🚌',
+  'entretien, réparations': '🔧',
+  'autres (transport)': '🚕',
+  'impôt sur le revenu': '🧾',
+  'don asf/mcf pour écoles': '🎗️',
+  'prévoyance cardif': '🛟',
+  'frais bancaires bnp': '🏦',
+  'assurance et crm assentis': '📇',
+  'forfait téléphone adrien (bouygues)': '📱',
+  'forfait téléphone selma (sfr)': '📱',
+  'crèche carte bancaire': '🍼',
+  'crèche cheques cesu': '🍼',
+  'sport (salle, club…)': '🏋️',
+  'denier du culte / paroisse': '⛪',
+  'cotisations assos / organisations politiques': '🗳️',
+  'courses alimentaires': '🛒',
+  'fruits et légumes': '🥦',
+  'viande / oeufs': '🥩',
+  'fromage et produits laitiers': '🧀',
+  'épicerie (pâtes, riz, pizzas, conserves)': '🥫',
+  'alcool': '🍷',
+  'boissons': '🥤',
+  'sucré': '🍬',
+  'apéritif': '🍿',
+  'nourriture bébé (lait, petits pots)': '🍼',
+  'couches bébé': '🧷',
+  'equipement/habits bébé': '👶',
+  'vêtements / chaussures': '👟',
+  'coiffeur': '💇',
+  'equipement maison / fourniture / déco / etc.': '🛋️',
+  'hygiène, beauté, pq': '🧴',
+  'produits entretien, etc.': '🧽',
+  'bricolage /travaux': '🛠️',
+  'médecin': '🩺',
+  'pharmacie': '💊',
+  'hôpital': '🏥',
+  'dentiste / lunettes / spécialistes': '🦷',
+  'kiné / ostéo': '💆',
+  'autres divers (santé)': '⚕️',
+  'remboursement aon': '🩹',
+  'livres': '📚',
+  'bar': '🍸',
+  'restaurant': '🍽️',
+  'spectacles / concerts / sorties': '🎭',
+  'trajets': '🚗',
+  'hébergement': '🏨',
+  'activités / loisirs': '🎨',
+  'anniversaires / noël': '🎂',
+  'mariages / évènements / invitations': '💍',
+  'autres divers': '🔹',
+  'administratif (cni, courrier, fournitures, etc.)': '🗂️'
+};
+
+function normalizeCat_(s) {
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+const CATEGORIES_DEPENSE_GROUPES = {
+  'Logement': { icon:'🏠', items:['Charges de copropriété (DURAND IMMO)','Electricité (TOTAL ENERGIES)','Gaz (TOTAL ENERGIES)','Mensualité prêt immobilier (BNP)','Assurance prêt (APRIL)','Assurance habitation (DIRECT ASSURANCE)','Autres (Logement)','Bricolage / Travaux','Taxe foncière'] },
+  'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Autres (Transport)'] },
+  'Impôts': { icon:'🧾', items:['Impôt sur le revenu','Don ASF/MCF pour écoles'] },
+  'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance CARDIF','Frais bancaires BNP','Assurance et CRM ASSENTIS','Forfait téléphone Adrien (Bouygues)','Forfait téléphone Selma (SFR)','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
+  'Alimentation': { icon:'🛒', items:['Courses alimentaires','Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
+  'Enfants': { icon:'👶', items:['Crèche CARTE BANCAIRE','Crèche CHEQUES CESU','Nourriture bébé (lait, petits pots)','Couches bébé','Equipement/habits bébé'] },
+  'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Autres divers (Santé)','Remboursement AON'] },
+  'Vie quotidienne': { icon:'🧴', items:['Vêtements / chaussures','Coiffeur','Equipement maison / fourniture / déco / etc.','Hygiène, beauté, PQ','Produits entretien, etc.','Autres divers'] },
+  'Loisirs & sorties': { icon:'🎭', items:['Livres','Bar','Restaurant','Spectacles / Concerts / Sorties'] },
+  'Vacances & voyages': { icon:'✈️', items:['Trajets','Hébergement','Activités / loisirs'] },
+  'Cadeaux': { icon:'🎁', items:['Anniversaires / Noël','Mariages / évènements / invitations'] },
+  'Administratif': { icon:'🗂️', items:['Administratif (CNI, courrier, fournitures, etc.)'] }
+};
+
+const CATEGORIES_REVENU = [
+  'Salaire Adrien','Salaire Selma','Revenus ASSENTIS','CPAM','CAF',
+  'Ventes Vinted / Leboncoin','Remboursement prêt étudiant','Cadeaux',
+  'Tickets restaurant (comptés à 60% ds le calcul)','Cheques CESU (comptés à 70% ds le calcul)','Autres revenus'
+];
+
+function iconForCategorie(cat) {
+  return EMOJI_CATEGORIES[normalizeCat_(cat)] || '➕';
+}
+
+function soumettreTransaction() {
+  const montant = document.getElementById('input-montant').value;
+  const date = document.getElementById('input-date').value;
+  const compte = document.getElementById('input-compte').value;
+  const note = document.getElementById('input-note').value;
+
+  if (!montant || Number(String(montant).replace(',', '.')) <= 0) {
+    alertInline('Indique un montant valide.');
+    return;
+  }
+  if (!saisieState.categorie) {
+    alertInline('Choisis une catégorie.');
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Enregistrement...';
+
+  apiPost('enregistrerTransaction', {
+    montant: montant, type: saisieState.type, categorie: saisieState.categorie,
+    compte: compte, note: note, date: date
+  })
+    .then(function(data) {
+      render(data);
+      navTo('screen-comptes', document.querySelector('[data-screen="screen-comptes"]'));
+      playStamp();
+      resetSaisieForm();
+      btn.disabled = false;
+      btn.textContent = "Enregistrer l'écriture";
+    })
+    .catch(function(err) {
+      alertInline('Erreur : ' + err.message);
+      btn.disabled = false;
+      btn.textContent = "Enregistrer l'écriture";
+    });
+}
+
+function resetSaisieForm() {
+  document.getElementById('input-montant').value = '';
+  document.getElementById('input-note').value = '';
+  document.getElementById('input-date').valueAsDate = new Date();
+}
+
+function playStamp() {
+  const ov = document.getElementById('stampOverlay');
+  ov.classList.add('show');
+  setTimeout(() => ov.classList.remove('show'), 1100);
+}
+
+function alertInline(msg) {
+  const tag = document.getElementById('loading-tag');
+  const original = tag.textContent;
+  tag.textContent = '⚠ ' + msg;
+  setTimeout(() => { tag.textContent = original; }, 2500);
+}
+
+function renderRoadmap(items) {
+  const groups = { PASSÉE: [], PROCHAINEMENT: [], FUTUR: [] };
+  items.forEach(it => {
+    if (!groups[it.statut]) groups[it.statut] = [];
+    groups[it.statut].push(it);
+  });
+  const labels = { PASSÉE: 'Passées', PROCHAINEMENT: 'Prochainement', FUTUR: 'Futur' };
+
+  let html = '';
+  ['PASSÉE', 'PROCHAINEMENT', 'FUTUR'].forEach(key => {
+    html += `<div class="section-title">${labels[key]}</div>`;
+    if (!groups[key].length) {
+      html += `<div class="roadmap-empty">Aucun élément</div>`;
+    } else {
+      groups[key].forEach(it => {
+        html += `<div class="roadmap-item">
+          <input class="roadmap-input" type="text" value="${escapeHtml_(it.texte)}"
+            data-row="${it.row}"
+            onblur="saveRoadmapItem(this)"
+            onkeydown="if(event.key==='Enter'){this.blur();}">
+          <select class="roadmap-select" data-row="${it.row}" onchange="saveRoadmapItem(this)">
+            <option value="PASSÉE" ${key==='PASSÉE'?'selected':''}>Passée</option>
+            <option value="PROCHAINEMENT" ${key==='PROCHAINEMENT'?'selected':''}>Prochainement</option>
+            <option value="FUTUR" ${key==='FUTUR'?'selected':''}>Futur</option>
+          </select>
+          <button class="roadmap-delete" data-row="${it.row}" data-confirm="0" onclick="deleteRoadmapItemUI(this)" title="Supprimer">✕</button>
+        </div>`;
+      });
+    }
+  });
+
+  html += `<div class="section-title">Ajouter un élément</div>
+    <div class="roadmap-add-row">
+      <input class="roadmap-add-input" type="text" id="new-roadmap-texte" placeholder="Nouvelle ligne...">
+      <button class="roadmap-add-btn" onclick="addRoadmapItemUI()">Ajouter</button>
+    </div>`;
+
+  document.getElementById('roadmap-container').innerHTML = html;
+}
+
+function deleteRoadmapItemUI(btn) {
+  if (btn.getAttribute('data-confirm') !== '1') {
+    btn.setAttribute('data-confirm', '1');
+    btn.textContent = '✓?';
+    btn.style.color = 'var(--coral)';
+    setTimeout(() => {
+      if (btn.isConnected) {
+        btn.setAttribute('data-confirm', '0');
+        btn.textContent = '✕';
+        btn.style.color = '';
+      }
+    }, 2500);
+    return;
+  }
+  const row = btn.getAttribute('data-row');
+  apiPost('deleteRoadmapItem', { row: row })
+    .then(function(data) { render(data); })
+    .catch(function(err) { alertInline('Erreur : ' + err.message); });
+}
+
+function addRoadmapItemUI() {
+  const texte = document.getElementById('new-roadmap-texte').value.trim();
+  if (!texte) return;
+  apiPost('addRoadmapItem', { texte: texte, statut: 'FUTUR' })
+    .then(function(data) { render(data); playStamp(); })
+    .catch(function(err) { alertInline('Erreur : ' + err.message); });
+}
+
+function escapeHtml_(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveRoadmapItem(el) {
+  const container = el.closest('.roadmap-item');
+  const row = container.querySelector('.roadmap-input').getAttribute('data-row');
+  const texte = container.querySelector('.roadmap-input').value.trim();
+  const statut = container.querySelector('.roadmap-select').value;
+  if (!texte) return;
+
+  apiPost('updateRoadmapItem', { row: row, texte: texte, statut: statut })
+    .then(function(data) {
+      render(data);
+      playStamp();
+    })
+    .catch(function(err) { alertInline('Erreur : ' + err.message); });
+}
