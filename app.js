@@ -3,14 +3,34 @@ window.onerror = function(msg) {
   return false;
 };
 
+
+let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
+let modeEdition = false; // false = création ; sinon { row, id } de la transaction éditée
+let historiqueOffset = 0;
+let historiqueItems = [];
+const HISTORIQUE_LOT = 15;
+function setType(t) {
+  saisieState.type = t;
+  saisieState.groupe = '';
+  document.getElementById('seg-dep').classList.toggle('active', t === 'Dépense');
+  document.getElementById('seg-rev').classList.toggle('active', t === 'Revenu');
+  renderGroupesOuCategories();
+}
+
 // ============================================================
 // CONFIGURATION API — Apps Script backend
 // ============================================================
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby8xjgcmphN3uhq7TbXwRaai2xsrNroM8wMetaQpmKOsprC0hjLZ9WPvdsokGIAHsC3/exec';
 const API_TOKEN = 'ezafzgerhgerdsfefe4fef4e5de5dfef74ezDF634EFCE879E';
 
-function apiGet(action) {
-  return fetch(API_BASE_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(API_TOKEN))
+function apiGet(action, extraParams) {
+  let url = API_BASE_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(API_TOKEN);
+  if (extraParams) {
+    Object.keys(extraParams).forEach(function(k) {
+      url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(extraParams[k]);
+    });
+  }
+  return fetch(url)
     .then(function(r) { return r.json(); })
     .then(function(json) {
       if (!json.success) throw new Error(json.error || 'Erreur API');
@@ -155,16 +175,6 @@ function render(data) {
 
 function onError(err) {
   document.getElementById('loading-tag').textContent = '⚠ ' + err.message;
-}
-
-let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
-
-function setType(t) {
-  saisieState.type = t;
-  saisieState.groupe = '';
-  document.getElementById('seg-dep').classList.toggle('active', t === 'Dépense');
-  document.getElementById('seg-rev').classList.toggle('active', t === 'Revenu');
-  renderGroupesOuCategories();
 }
 
 function renderGroupesOuCategories() {
@@ -340,6 +350,36 @@ function soumettreTransaction() {
   }
 
   const btn = document.getElementById('submit-btn');
+  const enEdition = !!modeEdition;
+  btn.disabled = true;
+  btn.textContent = enEdition ? 'Modification...' : 'Enregistrement...';
+
+  const payload = { montant: montant, type: saisieState.type, categorie: saisieState.categorie, compte: compte, note: note, date: date };
+  if (enEdition) { payload.row = modeEdition.row; payload.id = modeEdition.id; }
+
+  apiPost(enEdition ? 'modifierTransaction' : 'enregistrerTransaction', payload)
+    .then(function(data) {
+      render(data);
+      if (enEdition) {
+        modeEdition = false;
+        navTo('screen-historique', document.querySelector('[data-screen="screen-historique"]'));
+        chargerHistorique(true);
+      } else {
+        navTo('screen-comptes', document.querySelector('[data-screen="screen-comptes"]'));
+      }
+      playStamp();
+      resetSaisieForm();
+      btn.disabled = false;
+      btn.textContent = "Enregistrer l'écriture";
+    })
+    .catch(function(err) {
+      alertInline('Erreur : ' + err.message);
+      btn.disabled = false;
+      btn.textContent = enEdition ? "Modifier l'écriture" : "Enregistrer l'écriture";
+    });
+}
+
+  const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.textContent = 'Enregistrement...';
 
@@ -452,6 +492,117 @@ function addRoadmapItemUI() {
 function escapeHtml_(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+
+function nouvelleSaisie() {
+  modeEdition = false;
+  saisieState = { type: 'Dépense', groupe: '', categorie: '' };
+  document.getElementById('input-montant').value = '';
+  document.getElementById('input-note').value = '';
+  document.getElementById('input-date').valueAsDate = new Date();
+  setType('Dépense');
+  document.getElementById('submit-btn').textContent = "Enregistrer l'écriture";
+  navTo('screen-saisie', null);
+}
+
+function chargerHistorique(reset) {
+  if (reset) { historiqueOffset = 0; historiqueItems = []; }
+  apiGet('getTransactions', { offset: historiqueOffset, limit: HISTORIQUE_LOT })
+    .then(function(data) {
+      historiqueItems = historiqueItems.concat(data.transactions);
+      historiqueOffset += data.transactions.length;
+      renderHistorique(data.hasMore);
+    })
+    .catch(onError);
+}
+
+function chargerPlusHistorique() { chargerHistorique(false); }
+
+function renderHistorique(hasMore) {
+  let html = '';
+  historiqueItems.forEach(function(t) {
+    const isDep = t.type === 'Dépense';
+    const sign = isDep ? '−' : '+';
+    const color = isDep ? 'var(--coral)' : 'var(--sage)';
+    html += `<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction('${t.row}')">
+      <div class="acc-left"><div class="acc-icon">${isDep ? '💸' : '💶'}</div>
+        <div><div class="acc-name">${t.categorie}</div><div class="acc-sub">${t.date}${t.note ? ' · ' + t.note : ''}</div></div></div>
+      <div class="acc-amount" style="color:${color}">${sign}${fmtEUR(t.montant).replace('−','').replace('+','')}</div>
+    </div>`;
+  });
+  document.getElementById('historique-container').innerHTML = html || '<div class="roadmap-empty">Aucune transaction</div>';
+  document.getElementById('historique-charger-plus').style.display = hasMore ? '' : 'none';
+}
+
+function ouvrirEditionTransaction(row) {
+  const t = historiqueItems.find(function(x) { return String(x.row) === String(row); });
+  if (!t) return;
+  modeEdition = { row: t.row, id: t.id };
+
+  setType(t.type);
+  if (t.type === 'Dépense') {
+    const groupe = Object.keys(CATEGORIES_DEPENSE_GROUPES).find(function(g) {
+      return CATEGORIES_DEPENSE_GROUPES[g].items.some(function(i) { return i.toLowerCase() === t.categorie.toLowerCase(); });
+    });
+    if (groupe) {
+      saisieState.groupe = groupe;
+      renderGroupesOuCategories();
+      document.querySelectorAll('#group-scroll .chip').forEach(function(c) {
+        c.classList.toggle('active', c.getAttribute('data-groupe') === groupe);
+      });
+    }
+  }
+  saisieState.categorie = t.categorie;
+  document.querySelectorAll('#chip-scroll .chip').forEach(function(c) {
+    c.classList.toggle('active', c.getAttribute('data-cat') === t.categorie);
+  });
+
+  document.getElementById('input-montant').value = String(t.montant).replace('.', ',');
+  document.getElementById('input-date').value = t.dateISO || '';
+  document.getElementById('input-compte').value = t.compte;
+  document.getElementById('input-note').value = t.note || '';
+
+  document.getElementById('submit-btn').textContent = "Modifier l'écriture";
+  navTo('screen-saisie', null);
+}
+
+
+function chargerBudget() {
+  apiGet('getBudgetParGroupe').then(renderBudget).catch(onError);
+}
+
+function renderBudget(data) {
+  let html = `<div class="section-title" style="padding-top:6px">${data.moisLabels.join(' · ')} — ${data.moyenneLabel}</div>`;
+  data.groupes.forEach(function(g, idx) {
+    const dernierMois = g.mois[g.mois.length - 1] || 0;
+    html += `<div class="alloc-row" style="cursor:pointer" onclick="toggleBudgetGroupe(${idx})">
+      <div class="alloc-top">
+        <div class="alloc-name">${g.nom}</div>
+        <div class="alloc-values"><div class="alloc-amount">${fmtEUR(dernierMois)}</div></div>
+      </div>
+      <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-dim);">
+        ${g.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ' : ' + fmtEUR(m); }).join(' · ')} · Moy : ${fmtEUR(g.moyenne)}
+      </div>
+    </div>
+    <div class="accounts" id="budget-detail-${idx}" style="display:none; padding-left:12px;">
+      ${g.detail.map(function(d) {
+        return `<div class="account-row">
+          <div class="acc-left"><div>
+            <div class="acc-name" style="font-size:12.5px">${d.nom}</div>
+            <div class="acc-sub">${d.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ': ' + fmtEUR(m); }).join(' · ')} · Moy : ${fmtEUR(d.moyenne)}</div>
+          </div></div>
+        </div>`;
+      }).join('') || '<div class="roadmap-empty">Aucun détail</div>'}
+    </div>`;
+  });
+  document.getElementById('budget-container').innerHTML = html;
+}
+
+function toggleBudgetGroupe(idx) {
+  const el = document.getElementById('budget-detail-' + idx);
+  el.style.display = (el.style.display === 'none') ? '' : 'none';
+}
+
 
 function saveRoadmapItem(el) {
   const container = el.closest('.roadmap-item');
