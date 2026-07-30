@@ -285,3 +285,50 @@
     filter:
         drop-shadow(0 0 0px rgba(201,162,39,.0));
 }
+
+@keyframes coinIntro{
+0%{
+    opacity:0;
+    transform:
+        scale(.85)
+        rotateY(0deg);
+    filter:
+        drop-shadow(0 0 0px rgba(201,162,39,0));
+}
+18%{
+    opacity:1;
+}
+35%{
+    transform:
+        scale(1)
+        rotateY(20deg);
+}
+55%{
+    transform:
+        scale(1)
+        rotateY(120deg);
+}
+70%{
+    transform:
+        scale(.95)
+        rotateY(320deg);
+}
+82%{
+    transform:
+        scale(.82)
+        rotateY(700deg);
+}
+92%{
+    transform:
+        scale(.45)
+        rotateY(1350deg);
+}
+100%{
+    opacity:0;
+    transform:
+        scale(.08)
+        rotateY(2200deg);
+    filter:
+        drop-shadow(0 0 35px rgba(201,162,39,.9));
+}
+}
