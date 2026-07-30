@@ -3,15 +3,6 @@ window.onerror = function(msg) {
   return false;
 };
 
-const HISTORIQUE_LOT = 15;
-function setType(t) {
-  saisieState.type = t;
-  saisieState.groupe = '';
-  document.getElementById('seg-dep').classList.toggle('active', t === 'Dépense');
-  document.getElementById('seg-rev').classList.toggle('active', t === 'Revenu');
-  renderGroupesOuCategories();
-}
-
 // ============================================================
 // CONFIGURATION API — Apps Script backend
 // ============================================================
@@ -46,6 +37,15 @@ function apiPost(action, payload) {
       return json.data;
     });
 }
+
+// ============================================================
+// ÉTAT GLOBAL
+// ============================================================
+let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
+let modeEdition = false; // false = création ; sinon { row, id } de la transaction éditée
+let historiqueOffset = 0;
+let historiqueItems = [];
+const HISTORIQUE_LOT = 15;
 
 // ============================================================
 // CHARGEMENT INITIAL
@@ -83,13 +83,26 @@ function iconFor(label) {
 
 function navTo(screenId, btn) {
   showScreen(screenId);
-  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
+  if (screenId === 'screen-historique' && historiqueItems.length === 0) chargerHistorique(true);
+  if (screenId === 'screen-budget') chargerBudget();
 }
 
 function showScreen(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(function(s) { s.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
+}
+
+function nouvelleSaisie() {
+  modeEdition = false;
+  saisieState = { type: 'Dépense', groupe: '', categorie: '' };
+  document.getElementById('input-montant').value = '';
+  document.getElementById('input-note').value = '';
+  document.getElementById('input-date').valueAsDate = new Date();
+  setType('Dépense');
+  document.getElementById('submit-btn').textContent = "Enregistrer l'écriture";
+  navTo('screen-saisie', null);
 }
 
 function render(data) {
@@ -107,64 +120,58 @@ function render(data) {
     renderRoadmap(data.feuilleDeRoute || []);
 
     let allocHtml = '';
-    (data.allocation.lignes || []).forEach(l => {
+    (data.allocation.lignes || []).forEach(function(l) {
       const pctNum = parseFloat(String(l.pct).replace('%','')) || 0;
-      allocHtml += `<div class="alloc-row">
-        <div class="alloc-top">
-          <div class="alloc-name"><span class="alloc-icon">${iconFor(l.placement)}</span>${l.placement}</div>
-          <div class="alloc-values">
-            <div class="alloc-amount">${fmtEUR(l.montant)}</div>
-            <div class="alloc-pct">${l.pct}</div>
-          </div>
-        </div>
-        <div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:${pctNum}%"></div></div>
-      </div>`;
+      allocHtml += '<div class="alloc-row">' +
+          '<div class="alloc-top">' +
+            '<div class="alloc-name"><span class="alloc-icon">' + iconFor(l.placement) + '</span>' + l.placement + '</div>' +
+            '<div class="alloc-values">' +
+              '<div class="alloc-amount">' + fmtEUR(l.montant) + '</div>' +
+              '<div class="alloc-pct">' + l.pct + '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="alloc-bar-bg"><div class="alloc-bar-fill" style="width:' + pctNum + '%"></div></div>' +
+        '</div>';
     });
     document.getElementById('allocation-container').innerHTML = allocHtml;
 
-    
-let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
-let modeEdition = false; // false = création ; sinon { row, id } de la transaction éditée
-let historiqueOffset = 0;
-let historiqueItems = [];
-    
     const bySection = {};
-    (data.comptes || []).forEach(c => {
+    (data.comptes || []).forEach(function(c) {
       if (!bySection[c.section]) bySection[c.section] = [];
       bySection[c.section].push(c);
     });
     let html = '';
-    Object.keys(bySection).forEach(section => {
-      html += `<div class="section-title">${section}</div><div class="accounts">`;
-      bySection[section].forEach(c => {
-        html += `<div class="account-row">
-          <div class="acc-left"><div class="acc-icon">${iconFor(c.nom)}</div>
-            <div><div class="acc-name">${c.nom}</div></div></div>
-          <div class="acc-amount">${fmtEUR(c.valeur)}</div>
-        </div>`;
+    Object.keys(bySection).forEach(function(section) {
+      html += '<div class="section-title">' + section + '</div><div class="accounts">';
+      bySection[section].forEach(function(c) {
+        html += '<div class="account-row">' +
+            '<div class="acc-left"><div class="acc-icon">' + iconFor(c.nom) + '</div>' +
+              '<div><div class="acc-name">' + c.nom + '</div></div></div>' +
+            '<div class="acc-amount">' + fmtEUR(c.valeur) + '</div>' +
+          '</div>';
       });
-      html += `</div>`;
+      html += '</div>';
     });
     document.getElementById('comptes-container').innerHTML = html;
 
     let txHtml = '';
-    (data.dernieres || []).forEach(t => {
+    (data.dernieres || []).forEach(function(t) {
       const isDep = t.type === 'Dépense';
       const sign = isDep ? '−' : '+';
       const color = isDep ? 'var(--coral)' : 'var(--sage)';
-      txHtml += `<div class="account-row">
-        <div class="acc-left"><div class="acc-icon">${isDep ? '💸' : '💶'}</div>
-          <div><div class="acc-name">${t.categorie}</div><div class="acc-sub">${t.date}</div></div></div>
-        <div class="acc-amount" style="color:${color}">${sign}${fmtEUR(t.montant).replace('−','').replace('+','')}</div>
-      </div>`;
+      txHtml += '<div class="account-row">' +
+          '<div class="acc-left"><div class="acc-icon">' + (isDep ? '💸' : '💶') + '</div>' +
+            '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + '</div></div></div>' +
+          '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR(t.montant).replace('−','').replace('+','') + '</div>' +
+        '</div>';
     });
     document.getElementById('transactions-container').innerHTML = txHtml;
 
     const compteSelect = document.getElementById('input-compte');
     const comptesListe = data.comptesListe || [];
-    compteSelect.innerHTML = comptesListe.map(c => `<option value="${c}">${c}</option>`).join('');
-    const defaultCompte = comptesListe.find(c => c.toLowerCase().includes('trade republic'));
-    if (defaultCompte) compteSelect.value = defaultCompte;
+    compteSelect.innerHTML = comptesListe.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+    const defaultCompte = comptesListe.find(function(c) { return c.toLowerCase().includes('trade republic'); });
+    if (defaultCompte && !modeEdition) compteSelect.value = defaultCompte;
     if (!document.getElementById('input-date').value) {
       document.getElementById('input-date').valueAsDate = new Date();
     }
@@ -178,6 +185,14 @@ function onError(err) {
   document.getElementById('loading-tag').textContent = '⚠ ' + err.message;
 }
 
+function setType(t) {
+  saisieState.type = t;
+  saisieState.groupe = '';
+  document.getElementById('seg-dep').classList.toggle('active', t === 'Dépense');
+  document.getElementById('seg-rev').classList.toggle('active', t === 'Revenu');
+  renderGroupesOuCategories();
+}
+
 function renderGroupesOuCategories() {
   const groupZone = document.getElementById('group-zone');
   const chipZone = document.getElementById('chip-zone');
@@ -185,11 +200,12 @@ function renderGroupesOuCategories() {
   if (saisieState.type === 'Dépense') {
     groupZone.style.display = '';
     const groupes = Object.keys(CATEGORIES_DEPENSE_GROUPES);
-    document.getElementById('group-scroll').innerHTML = groupes.map(g => `
-      <div class="chip ${saisieState.groupe===g ? 'active':''}" data-groupe="${g}" onclick="selectGroupe(this)">
-        <div class="chip-stamp">${CATEGORIES_DEPENSE_GROUPES[g].icon}</div>
-        <div class="chip-label">${g}</div>
-      </div>`).join('');
+    document.getElementById('group-scroll').innerHTML = groupes.map(function(g) {
+      return '<div class="chip ' + (saisieState.groupe===g ? 'active':'') + '" data-groupe="' + g + '" onclick="selectGroupe(this)">' +
+        '<div class="chip-stamp">' + CATEGORIES_DEPENSE_GROUPES[g].icon + '</div>' +
+        '<div class="chip-label">' + g + '</div>' +
+      '</div>';
+    }).join('');
 
     if (!saisieState.groupe) {
       chipZone.style.display = 'none';
@@ -207,23 +223,24 @@ function renderGroupesOuCategories() {
 }
 
 function renderSousCategories(items) {
-  document.getElementById('chip-scroll').innerHTML = items.map((c, i) => `
-    <div class="chip ${i===0 ? 'active':''}" data-cat="${c}" onclick="selectChip(this)">
-      <div class="chip-stamp">${iconForCategorie(c)}</div>
-      <div class="chip-label">${c}</div>
-    </div>`).join('');
+  document.getElementById('chip-scroll').innerHTML = items.map(function(c, i) {
+    return '<div class="chip ' + (i===0 ? 'active':'') + '" data-cat="' + c + '" onclick="selectChip(this)">' +
+      '<div class="chip-stamp">' + iconForCategorie(c) + '</div>' +
+      '<div class="chip-label">' + c + '</div>' +
+    '</div>';
+  }).join('');
   saisieState.categorie = items[0] || '';
 }
 
 function selectGroupe(el) {
-  document.querySelectorAll('#group-scroll .chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#group-scroll .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   saisieState.groupe = el.getAttribute('data-groupe');
   renderGroupesOuCategories();
 }
 
 function selectChip(el) {
-  document.querySelectorAll('#chip-scroll .chip').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#chip-scroll .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   saisieState.categorie = el.getAttribute('data-cat');
 }
@@ -380,29 +397,6 @@ function soumettreTransaction() {
     });
 }
 
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.textContent = 'Enregistrement...';
-
-  apiPost('enregistrerTransaction', {
-    montant: montant, type: saisieState.type, categorie: saisieState.categorie,
-    compte: compte, note: note, date: date
-  })
-    .then(function(data) {
-      render(data);
-      navTo('screen-comptes', document.querySelector('[data-screen="screen-comptes"]'));
-      playStamp();
-      resetSaisieForm();
-      btn.disabled = false;
-      btn.textContent = "Enregistrer l'écriture";
-    })
-    .catch(function(err) {
-      alertInline('Erreur : ' + err.message);
-      btn.disabled = false;
-      btn.textContent = "Enregistrer l'écriture";
-    });
-}
-
 function resetSaisieForm() {
   document.getElementById('input-montant').value = '';
   document.getElementById('input-note').value = '';
@@ -412,52 +406,55 @@ function resetSaisieForm() {
 function playStamp() {
   const ov = document.getElementById('stampOverlay');
   ov.classList.add('show');
-  setTimeout(() => ov.classList.remove('show'), 1100);
+  setTimeout(function() { ov.classList.remove('show'); }, 1100);
 }
 
 function alertInline(msg) {
   const tag = document.getElementById('loading-tag');
   const original = tag.textContent;
   tag.textContent = '⚠ ' + msg;
-  setTimeout(() => { tag.textContent = original; }, 2500);
+  setTimeout(function() { tag.textContent = original; }, 2500);
 }
 
+// ============================================================
+// FEUILLE DE ROUTE (Objectifs)
+// ============================================================
 function renderRoadmap(items) {
   const groups = { PASSÉE: [], PROCHAINEMENT: [], FUTUR: [] };
-  items.forEach(it => {
+  items.forEach(function(it) {
     if (!groups[it.statut]) groups[it.statut] = [];
     groups[it.statut].push(it);
   });
   const labels = { PASSÉE: 'Passées', PROCHAINEMENT: 'Prochainement', FUTUR: 'Futur' };
 
   let html = '';
-  ['PASSÉE', 'PROCHAINEMENT', 'FUTUR'].forEach(key => {
-    html += `<div class="section-title">${labels[key]}</div>`;
+  ['PASSÉE', 'PROCHAINEMENT', 'FUTUR'].forEach(function(key) {
+    html += '<div class="section-title">' + labels[key] + '</div>';
     if (!groups[key].length) {
-      html += `<div class="roadmap-empty">Aucun élément</div>`;
+      html += '<div class="roadmap-empty">Aucun élément</div>';
     } else {
-      groups[key].forEach(it => {
-        html += `<div class="roadmap-item">
-          <input class="roadmap-input" type="text" value="${escapeHtml_(it.texte)}"
-            data-row="${it.row}"
-            onblur="saveRoadmapItem(this)"
-            onkeydown="if(event.key==='Enter'){this.blur();}">
-          <select class="roadmap-select" data-row="${it.row}" onchange="saveRoadmapItem(this)">
-            <option value="PASSÉE" ${key==='PASSÉE'?'selected':''}>Passée</option>
-            <option value="PROCHAINEMENT" ${key==='PROCHAINEMENT'?'selected':''}>Prochainement</option>
-            <option value="FUTUR" ${key==='FUTUR'?'selected':''}>Futur</option>
-          </select>
-          <button class="roadmap-delete" data-row="${it.row}" data-confirm="0" onclick="deleteRoadmapItemUI(this)" title="Supprimer">✕</button>
-        </div>`;
+      groups[key].forEach(function(it) {
+        html += '<div class="roadmap-item">' +
+            '<input class="roadmap-input" type="text" value="' + escapeHtml_(it.texte) + '"' +
+              ' data-row="' + it.row + '"' +
+              ' onblur="saveRoadmapItem(this)"' +
+              ' onkeydown="if(event.key===\'Enter\'){this.blur();}">' +
+            '<select class="roadmap-select" data-row="' + it.row + '" onchange="saveRoadmapItem(this)">' +
+              '<option value="PASSÉE" ' + (key==='PASSÉE'?'selected':'') + '>Passée</option>' +
+              '<option value="PROCHAINEMENT" ' + (key==='PROCHAINEMENT'?'selected':'') + '>Prochainement</option>' +
+              '<option value="FUTUR" ' + (key==='FUTUR'?'selected':'') + '>Futur</option>' +
+            '</select>' +
+            '<button class="roadmap-delete" data-row="' + it.row + '" data-confirm="0" onclick="deleteRoadmapItemUI(this)" title="Supprimer">✕</button>' +
+          '</div>';
       });
     }
   });
 
-  html += `<div class="section-title">Ajouter un élément</div>
-    <div class="roadmap-add-row">
-      <input class="roadmap-add-input" type="text" id="new-roadmap-texte" placeholder="Nouvelle ligne...">
-      <button class="roadmap-add-btn" onclick="addRoadmapItemUI()">Ajouter</button>
-    </div>`;
+  html += '<div class="section-title">Ajouter un élément</div>' +
+    '<div class="roadmap-add-row">' +
+      '<input class="roadmap-add-input" type="text" id="new-roadmap-texte" placeholder="Nouvelle ligne...">' +
+      '<button class="roadmap-add-btn" onclick="addRoadmapItemUI()">Ajouter</button>' +
+    '</div>';
 
   document.getElementById('roadmap-container').innerHTML = html;
 }
@@ -467,7 +464,7 @@ function deleteRoadmapItemUI(btn) {
     btn.setAttribute('data-confirm', '1');
     btn.textContent = '✓?';
     btn.style.color = 'var(--coral)';
-    setTimeout(() => {
+    setTimeout(function() {
       if (btn.isConnected) {
         btn.setAttribute('data-confirm', '0');
         btn.textContent = '✕';
@@ -494,18 +491,24 @@ function escapeHtml_(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function saveRoadmapItem(el) {
+  const container = el.closest('.roadmap-item');
+  const row = container.querySelector('.roadmap-input').getAttribute('data-row');
+  const texte = container.querySelector('.roadmap-input').value.trim();
+  const statut = container.querySelector('.roadmap-select').value;
+  if (!texte) return;
 
-function nouvelleSaisie() {
-  modeEdition = false;
-  saisieState = { type: 'Dépense', groupe: '', categorie: '' };
-  document.getElementById('input-montant').value = '';
-  document.getElementById('input-note').value = '';
-  document.getElementById('input-date').valueAsDate = new Date();
-  setType('Dépense');
-  document.getElementById('submit-btn').textContent = "Enregistrer l'écriture";
-  navTo('screen-saisie', null);
+  apiPost('updateRoadmapItem', { row: row, texte: texte, statut: statut })
+    .then(function(data) {
+      render(data);
+      playStamp();
+    })
+    .catch(function(err) { alertInline('Erreur : ' + err.message); });
 }
 
+// ============================================================
+// HISTORIQUE
+// ============================================================
 function chargerHistorique(reset) {
   if (reset) { historiqueOffset = 0; historiqueItems = []; }
   apiGet('getTransactions', { offset: historiqueOffset, limit: HISTORIQUE_LOT })
@@ -525,11 +528,11 @@ function renderHistorique(hasMore) {
     const isDep = t.type === 'Dépense';
     const sign = isDep ? '−' : '+';
     const color = isDep ? 'var(--coral)' : 'var(--sage)';
-    html += `<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction('${t.row}')">
-      <div class="acc-left"><div class="acc-icon">${isDep ? '💸' : '💶'}</div>
-        <div><div class="acc-name">${t.categorie}</div><div class="acc-sub">${t.date}${t.note ? ' · ' + t.note : ''}</div></div></div>
-      <div class="acc-amount" style="color:${color}">${sign}${fmtEUR(t.montant).replace('−','').replace('+','')}</div>
-    </div>`;
+    html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
+        '<div class="acc-left"><div class="acc-icon">' + (isDep ? '💸' : '💶') + '</div>' +
+          '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
+        '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR(t.montant).replace('−','').replace('+','') + '</div>' +
+      '</div>';
   });
   document.getElementById('historique-container').innerHTML = html || '<div class="roadmap-empty">Aucune transaction</div>';
   document.getElementById('historique-charger-plus').style.display = hasMore ? '' : 'none';
@@ -567,34 +570,36 @@ function ouvrirEditionTransaction(row) {
   navTo('screen-saisie', null);
 }
 
-
+// ============================================================
+// BUDGET
+// ============================================================
 function chargerBudget() {
   apiGet('getBudgetParGroupe').then(renderBudget).catch(onError);
 }
 
 function renderBudget(data) {
-  let html = `<div class="section-title" style="padding-top:6px">${data.moisLabels.join(' · ')} — ${data.moyenneLabel}</div>`;
+  let html = '<div class="section-title" style="padding-top:6px">' + data.moisLabels.join(' · ') + ' — ' + data.moyenneLabel + '</div>';
   data.groupes.forEach(function(g, idx) {
     const dernierMois = g.mois[g.mois.length - 1] || 0;
-    html += `<div class="alloc-row" style="cursor:pointer" onclick="toggleBudgetGroupe(${idx})">
-      <div class="alloc-top">
-        <div class="alloc-name">${g.nom}</div>
-        <div class="alloc-values"><div class="alloc-amount">${fmtEUR(dernierMois)}</div></div>
-      </div>
-      <div style="font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:var(--paper-dim);">
-        ${g.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ' : ' + fmtEUR(m); }).join(' · ')} · Moy : ${fmtEUR(g.moyenne)}
-      </div>
-    </div>
-    <div class="accounts" id="budget-detail-${idx}" style="display:none; padding-left:12px;">
-      ${g.detail.map(function(d) {
-        return `<div class="account-row">
-          <div class="acc-left"><div>
-            <div class="acc-name" style="font-size:12.5px">${d.nom}</div>
-            <div class="acc-sub">${d.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ': ' + fmtEUR(m); }).join(' · ')} · Moy : ${fmtEUR(d.moyenne)}</div>
-          </div></div>
-        </div>`;
-      }).join('') || '<div class="roadmap-empty">Aucun détail</div>'}
-    </div>`;
+    html += '<div class="alloc-row" style="cursor:pointer" onclick="toggleBudgetGroupe(' + idx + ')">' +
+        '<div class="alloc-top">' +
+          '<div class="alloc-name">' + g.nom + '</div>' +
+          '<div class="alloc-values"><div class="alloc-amount">' + fmtEUR(dernierMois) + '</div></div>' +
+        '</div>' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace; font-size:10.5px; color:var(--paper-dim);">' +
+          g.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ' : ' + fmtEUR(m); }).join(' · ') + ' · Moy : ' + fmtEUR(g.moyenne) +
+        '</div>' +
+      '</div>' +
+      '<div class="accounts" id="budget-detail-' + idx + '" style="display:none; padding-left:12px;">' +
+        (g.detail.map(function(d) {
+          return '<div class="account-row">' +
+            '<div class="acc-left"><div>' +
+              '<div class="acc-name" style="font-size:12.5px">' + d.nom + '</div>' +
+              '<div class="acc-sub">' + d.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ': ' + fmtEUR(m); }).join(' · ') + ' · Moy : ' + fmtEUR(d.moyenne) + '</div>' +
+            '</div></div>' +
+          '</div>';
+        }).join('') || '<div class="roadmap-empty">Aucun détail</div>') +
+      '</div>';
   });
   document.getElementById('budget-container').innerHTML = html;
 }
@@ -602,20 +607,4 @@ function renderBudget(data) {
 function toggleBudgetGroupe(idx) {
   const el = document.getElementById('budget-detail-' + idx);
   el.style.display = (el.style.display === 'none') ? '' : 'none';
-}
-
-
-function saveRoadmapItem(el) {
-  const container = el.closest('.roadmap-item');
-  const row = container.querySelector('.roadmap-input').getAttribute('data-row');
-  const texte = container.querySelector('.roadmap-input').value.trim();
-  const statut = container.querySelector('.roadmap-select').value;
-  if (!texte) return;
-
-  apiPost('updateRoadmapItem', { row: row, texte: texte, statut: statut })
-    .then(function(data) {
-      render(data);
-      playStamp();
-    })
-    .catch(function(err) { alertInline('Erreur : ' + err.message); });
 }
