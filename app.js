@@ -45,7 +45,7 @@ let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
 let modeEdition = false; // false = création ; sinon { row, id } de la transaction éditée
 let historiqueOffset = 0;
 let historiqueItems = [];
-const HISTORIQUE_LOT = 15;
+const HISTORIQUE_LOT = 10;
 
 // ============================================================
 // CHARGEMENT INITIAL
