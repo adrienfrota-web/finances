@@ -126,16 +126,6 @@ function render(data) {
     });
     document.getElementById('comptes-container').innerHTML = html;
 
-    let cryptoHtml = '';
-    (data.crypto || []).forEach(c => {
-      cryptoHtml += `<div class="crypto-chip">
-        <div class="sym">${c.actif}</div>
-        <div class="amt">${fmtEUR(c.valeur)}</div>
-        <div class="chg up">${c.solde} ${c.actif}</div>
-      </div>`;
-    });
-    document.getElementById('crypto-container').innerHTML = cryptoHtml;
-
     let txHtml = '';
     (data.dernieres || []).forEach(t => {
       const isDep = t.type === 'Dépense';
