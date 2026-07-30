@@ -254,8 +254,8 @@ const EMOJI_CATEGORIES = {
   'ventes vinted / leboncoin': '🛍️',
   'remboursement prêt étudiant': '🎓',
   'cadeaux': '🎁',
-  'tickets restaurant (comptés à 60% ds le calcul)': '🍽️',
-  'cheques cesu (comptés à 70% ds le calcul)': '🍽️',
+  'tickets restaurant': '🍽️',
+  'cheques CESU': '🍽️',
   'autres revenus': '💰',
   'charges de copropriété (durand immo)': '🏢',
   'electricité (total energies)': '💡',
@@ -345,7 +345,7 @@ const CATEGORIES_DEPENSE_GROUPES = {
 const CATEGORIES_REVENU = [
   'Salaire Adrien','Salaire Selma','Revenus ASSENTIS','CPAM','CAF',
   'Ventes Vinted / Leboncoin','Remboursement prêt étudiant','Cadeaux',
-  'Tickets restaurant (comptés à 60% ds le calcul)','Cheques CESU (comptés à 70% ds le calcul)','Autres revenus'
+  'Tickets restaurant','Cheques CESU','Autres revenus'
 ];
 
 function iconForCategorie(cat) {
