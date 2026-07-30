@@ -3,11 +3,6 @@ window.onerror = function(msg) {
   return false;
 };
 
-
-let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
-let modeEdition = false; // false = création ; sinon { row, id } de la transaction éditée
-let historiqueOffset = 0;
-let historiqueItems = [];
 const HISTORIQUE_LOT = 15;
 function setType(t) {
   saisieState.type = t;
@@ -127,6 +122,12 @@ function render(data) {
     });
     document.getElementById('allocation-container').innerHTML = allocHtml;
 
+    
+let saisieState = { type: 'Dépense', groupe: '', categorie: '' };
+let modeEdition = false; // false = création ; sinon { row, id } de la transaction éditée
+let historiqueOffset = 0;
+let historiqueItems = [];
+    
     const bySection = {};
     (data.comptes || []).forEach(c => {
       if (!bySection[c.section]) bySection[c.section] = [];
