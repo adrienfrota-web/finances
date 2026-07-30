@@ -607,3 +607,14 @@ function toggleBudgetGroupe(idx) {
   const el = document.getElementById('budget-detail-' + idx);
   el.style.display = (el.style.display === 'none') ? '' : 'none';
 }
+
+// POUR OUVRIR LE LOGO DE MANIERE DYNAMIQUE
+window.addEventListener("load", () => {
+    const splash = document.getElementById("splash-screen");
+    setTimeout(() => {
+        splash.classList.add("hide");
+        setTimeout(() => {
+            splash.remove();
+        },450);
+    },1350);
+});
