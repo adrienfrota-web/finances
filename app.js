@@ -85,7 +85,7 @@ function navTo(screenId, btn) {
   showScreen(screenId);
   document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
-  if (screenId === 'screen-historique' && historiqueItems.length === 0) chargerHistorique(true);
+  if (screenId === 'screen-historique') chargerHistorique(true);
   if (screenId === 'screen-budget') chargerBudget();
 }
 
@@ -153,19 +153,6 @@ function render(data) {
       html += '</div>';
     });
     document.getElementById('comptes-container').innerHTML = html;
-
-    let txHtml = '';
-    (data.dernieres || []).forEach(function(t) {
-      const isDep = t.type === 'Dépense';
-      const sign = isDep ? '−' : '+';
-      const color = isDep ? 'var(--coral)' : 'var(--sage)';
-      txHtml += '<div class="account-row">' +
-          '<div class="acc-left"><div class="acc-icon">' + (isDep ? '💸' : '💶') + '</div>' +
-            '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + '</div></div></div>' +
-          '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR(t.montant).replace('−','').replace('+','') + '</div>' +
-        '</div>';
-    });
-    document.getElementById('transactions-container').innerHTML = txHtml;
 
     const compteSelect = document.getElementById('input-compte');
     const comptesListe = data.comptesListe || [];
@@ -255,7 +242,7 @@ const EMOJI_CATEGORIES = {
   'remboursement prêt étudiant': '🎓',
   'cadeaux': '🎁',
   'tickets restaurant': '🍽️',
-  'cheques CESU': '🍽️',
+  'cheques cesu': '🍽️',
   'autres revenus': '💰',
   'charges de copropriété': '🏢',
   'electricité': '💡',
@@ -509,7 +496,12 @@ function saveRoadmapItem(el) {
 // HISTORIQUE
 // ============================================================
 function chargerHistorique(reset) {
-  if (reset) { historiqueOffset = 0; historiqueItems = []; }
+  if (reset) {
+    historiqueOffset = 0;
+    historiqueItems = [];
+    document.getElementById('historique-container').innerHTML = '<div class="roadmap-empty">Chargement...</div>';
+    document.getElementById('historique-charger-plus').style.display = 'none';
+  }
   apiGet('getTransactions', { offset: historiqueOffset, limit: HISTORIQUE_LOT })
     .then(function(data) {
       historiqueItems = historiqueItems.concat(data.transactions);
@@ -577,29 +569,44 @@ function chargerBudget() {
 }
 
 function renderBudget(data) {
-  let html = '<div class="section-title" style="padding-top:6px">' + data.moisLabels.join(' · ') + ' — ' + data.moyenneLabel + '</div>';
-  data.groupes.forEach(function(g, idx) {
-    const dernierMois = g.mois[g.mois.length - 1] || 0;
-    html += '<div class="alloc-row" style="cursor:pointer" onclick="toggleBudgetGroupe(' + idx + ')">' +
-        '<div class="alloc-top">' +
-          '<div class="alloc-name">' + g.nom + '</div>' +
-          '<div class="alloc-values"><div class="alloc-amount">' + fmtEUR(dernierMois) + '</div></div>' +
-        '</div>' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace; font-size:10.5px; color:var(--paper-dim);">' +
-          g.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ' : ' + fmtEUR(m); }).join(' · ') + ' · Moy : ' + fmtEUR(g.moyenne) +
-        '</div>' +
-      '</div>' +
-      '<div class="accounts" id="budget-detail-' + idx + '" style="display:none; padding-left:12px;">' +
-        (g.detail.map(function(d) {
-          return '<div class="account-row">' +
-            '<div class="acc-left"><div>' +
-              '<div class="acc-name" style="font-size:12.5px">' + d.nom + '</div>' +
-              '<div class="acc-sub">' + d.mois.map(function(m, i) { return (data.moisLabels[i] || '') + ': ' + fmtEUR(m); }).join(' · ') + ' · Moy : ' + fmtEUR(d.moyenne) + '</div>' +
-            '</div></div>' +
-          '</div>';
-        }).join('') || '<div class="roadmap-empty">Aucun détail</div>') +
-      '</div>';
+  const nbMois = data.moisLabels.length;
+  let thead = '<tr><th></th>';
+  data.moisLabels.forEach(function(m, i) {
+    const cls = (i === nbMois - 1) ? ' class="budget-col-courant"' : '';
+    thead += '<th' + cls + '>' + m + '</th>';
   });
+  thead += '<th>Moy.</th></tr>';
+
+  let rows = '';
+  data.groupes.forEach(function(g, idx) {
+    rows += '<tr class="budget-group-row" onclick="toggleBudgetGroupe(' + idx + ')"><td>' + g.nom + '</td>';
+    g.mois.forEach(function(m, i) {
+      const cls = (i === nbMois - 1) ? ' class="budget-col-courant"' : '';
+      rows += '<td' + cls + '>' + fmtEUR(m) + '</td>';
+    });
+    rows += '<td>' + fmtEUR(g.moyenne) + '</td></tr>';
+
+    rows += '<tr id="budget-detail-' + idx + '" style="display:none"><td colspan="' + (nbMois + 2) + '" style="padding:0">';
+    rows += '<table class="budget-table">';
+    if (g.detail.length) {
+      g.detail.forEach(function(d) {
+        rows += '<tr class="budget-detail-row"><td>' + d.nom + '</td>';
+        d.mois.forEach(function(m, i) {
+          const cls = (i === nbMois - 1) ? ' class="budget-col-courant"' : '';
+          rows += '<td' + cls + '>' + fmtEUR(m) + '</td>';
+        });
+        rows += '<td>' + fmtEUR(d.moyenne) + '</td></tr>';
+      });
+    } else {
+      rows += '<tr class="budget-detail-row"><td colspan="' + (nbMois + 2) + '">Aucun détail</td></tr>';
+    }
+    rows += '</table></td></tr>';
+  });
+
+  const html =
+    '<div class="section-title" style="padding-top:6px">' + data.moyenneLabel + '</div>' +
+    '<div style="padding:0 24px 20px"><table class="budget-table">' + thead + rows + '</table></div>';
+
   document.getElementById('budget-container').innerHTML = html;
 }
 
@@ -607,3 +614,14 @@ function toggleBudgetGroupe(idx) {
   const el = document.getElementById('budget-detail-' + idx);
   el.style.display = (el.style.display === 'none') ? '' : 'none';
 }
+
+// ============================================================
+// SPLASH SCREEN
+// ============================================================
+setTimeout(function() {
+  const splash = document.getElementById('splashScreen');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(function() { splash.remove(); }, 400);
+  }
+}, 1300);
