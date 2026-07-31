@@ -235,22 +235,27 @@
   }
 
 /* ---------- BUDGET (tableau) ---------- */
-.budget-table{ width:100%; border-collapse:collapse; margin:2px 0 4px; }
-.budget-table th{
-  font-family:'IBM Plex Mono',monospace; font-size:9px; text-transform:uppercase;
-  letter-spacing:.04em; color:var(--paper-dim); font-weight:500; text-align:right; padding:4px 5px;
-}
-.budget-table th:first-child, .budget-table td:first-child{ text-align:left; }
-.budget-table td{
-  font-family:'IBM Plex Mono',monospace; font-size:12px; text-align:right;
-  padding:7px 5px; border-top:1px dashed var(--line);
-}
-.budget-table td:first-child{ font-family:'Inter',sans-serif; font-size:12.5px; color:var(--paper); }
-.budget-col-courant{ color:var(--brass); font-weight:700; }
-.budget-group-row{ cursor:pointer; }
-.budget-group-row td{ font-weight:600; }
-.budget-detail-row td{ color:var(--paper-dim); font-size:11px; }
-.budget-detail-row td:first-child{ padding-left:16px; font-size:11.5px; }
+  .budget-table{ width:100%; border-collapse:collapse; table-layout:fixed; font-family:'IBM Plex Mono',monospace; }
+  .budget-table th, .budget-table td{
+    padding:9px 4px; text-align:right; font-size:11px; border-bottom:1px dashed var(--line);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .budget-table th:first-child, .budget-table td:first-child{
+    width:30%; text-align:left; font-family:'Inter',sans-serif; font-size:12px; white-space:normal;
+    overflow:visible; padding-right:6px;
+  }
+  .budget-table th:not(:first-child), .budget-table td:not(:first-child){
+    width:17.5%;
+  }
+  .budget-table thead th{
+    color:var(--paper-dim); text-transform:uppercase; font-size:9px; letter-spacing:.04em;
+    border-bottom:1px solid var(--line); font-weight:600;
+  }
+  .budget-group-row{ cursor:pointer; font-weight:600; }
+  .budget-group-row td:first-child{ font-weight:600; }
+  .budget-detail-row td:first-child{ padding-left:14px; font-size:11px; color:var(--paper-dim); font-family:'Inter',sans-serif; }
+  .budget-detail-row td:not(:first-child){ font-size:10.5px; opacity:0.9; }
+  .budget-col-courant{ color:var(--brass); font-weight:700; }
 
 
 /* ---------- SPLASH SCREEN ---------- */
