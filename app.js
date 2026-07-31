@@ -421,10 +421,10 @@ function renderRoadmap(items) {
     } else {
       groups[key].forEach(function(it) {
         html += '<div class="roadmap-item">' +
-            '<input class="roadmap-input" type="text" value="' + escapeHtml_(it.texte) + '"' +
+            '<textarea class="roadmap-input" rows="1"' +
               ' data-row="' + it.row + '"' +
-              ' onblur="saveRoadmapItem(this)"' +
-              ' onkeydown="if(event.key===\'Enter\'){this.blur();}">' +
+              ' oninput="autoGrow_(this)"' +
+              ' onblur="saveRoadmapItem(this)">' + escapeHtml_(it.texte) + '</textarea>' +
             '<select class="roadmap-select" data-row="' + it.row + '" onchange="saveRoadmapItem(this)">' +
               '<option value="PASSÉE" ' + (key==='PASSÉE'?'selected':'') + '>Passée</option>' +
               '<option value="PROCHAINEMENT" ' + (key==='PROCHAINEMENT'?'selected':'') + '>Prochainement</option>' +
@@ -443,6 +443,12 @@ function renderRoadmap(items) {
     '</div>';
 
   document.getElementById('roadmap-container').innerHTML = html;
+  document.querySelectorAll('.roadmap-input').forEach(autoGrow_);
+}
+
+function autoGrow_(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }
 
 function deleteRoadmapItemUI(btn) {
