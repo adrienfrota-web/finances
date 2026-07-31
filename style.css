@@ -206,10 +206,12 @@
   .placeholder-screen .big{ font-size:32px; }
 
   /* ---------- FEUILLE DE ROUTE ---------- */
-  .roadmap-item{ display:flex; gap:10px; padding:12px 24px; border-bottom:1px dashed var(--line); align-items:center; }
+  .roadmap-item{ display:flex; gap:10px; padding:12px 24px; border-bottom:1px dashed var(--line); align-items:flex-start; }
   .roadmap-input{
     flex:1; background:transparent; border:none; border-bottom:1px solid transparent;
     color:var(--paper); font-family:'Inter',sans-serif; font-size:13.5px; padding:4px 0; outline:none;
+    resize:none; overflow:hidden; white-space:pre-wrap; word-break:break-word;
+    line-height:1.4;
   }
   .roadmap-input:focus{ border-bottom:1px solid var(--brass); }
   .roadmap-select{
