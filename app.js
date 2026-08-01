@@ -50,6 +50,133 @@ let comptesCharges = false;   // écran "Comptes" (kpis/allocation/patrimoine) d
 let objectifsCharges = false; // feuille de route déjà chargée ?
 
 // ============================================================
+// CATÉGORIES (figées côté client, indépendantes du Sheet)
+// IMPORTANT : ce bloc doit être défini avant tout appel à renderGroupesOuCategories()
+// (voir plus bas, section "CHARGEMENT INITIAL") — sinon ReferenceError de TDZ sur les
+// const, puisque le script s'exécute dans l'ordre du fichier.
+// ============================================================
+function normalizeCat_(s) {
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+const EMOJI_CATEGORIES = {
+  'salaire adrien': '💶',
+  'salaire selma': '💶',
+  'revenus assentis': '💼',
+  'cpam': '⚕️',
+  'caf': '👶',
+  'ventes vinted / leboncoin': '🛍️',
+  'remboursement prêt étudiant': '🎓',
+  'cadeaux': '🎁',
+  'tickets restaurant': '🍽️',
+  'cheques cesu': '🍽️',
+  'autres revenus': '💰',
+  'charges de copropriété': '🏢',
+  'electricité': '💡',
+  'gaz': '🔥',
+  'mensualité prêt immobilier': '🏠',
+  'assurance prêt': '🛡️',
+  'assurance habitation': '🏚️',
+  'taxe foncière': '🏛️',
+  'autres (logement)': '🏠',
+  'carburant': '⛽',
+  'train / avion / bus / taxi': '🚆',
+  'péage': '🛣️',
+  'stationnement': '🅿️',
+  'contraventions': '🚨',
+  'transports en commun': '🚌',
+  'entretien, réparations': '🔧',
+  'assurance auto': '🚌',
+  'autres (transport)': '🚕',
+  'impôt sur le revenu': '🧾',
+  'don asf/mcf pour écoles': '🎗️',
+  'prévoyance': '🛟',
+  'frais bancaires': '🏦',
+  'assurance et crm assentis': '📇',
+  'forfait téléphone adrien': '📱',
+  'forfait téléphone selma': '📱',
+  'crèche': '🍼',
+  'sport (salle, club…)': '🏋️',
+  'denier du culte / paroisse': '⛪',
+  'cotisations assos / organisations politiques': '🗳️',
+  'courses alimentaires': '🛒',
+  'fruits et légumes': '🥦',
+  'viande / oeufs': '🥩',
+  'fromage et produits laitiers': '🧀',
+  'épicerie (pâtes, riz, pizzas, conserves)': '🥫',
+  'alcool': '🍷',
+  'boissons': '🥤',
+  'sucré': '🍬',
+  'apéritif': '🍿',
+  'nourriture bébé (lait, petits pots)': '🍼',
+  'couches bébé': '🧷',
+  'equipement/habits bébé': '👶',
+  'vêtements / chaussures': '👟',
+  'coiffeur': '💇',
+  'equipement maison / fourniture / déco / etc.': '🛋️',
+  'hygiène, beauté, pq': '🧴',
+  'produits entretien, etc.': '🧽',
+  'bricolage /travaux': '🛠️',
+  'médecin': '🩺',
+  'pharmacie': '💊',
+  'hôpital': '🏥',
+  'dentiste / lunettes / spécialistes': '🦷',
+  'kiné / ostéo': '💆',
+  'autres divers (santé)': '⚕️',
+  'remboursement mutuelle': '🩹',
+  'livres': '📚',
+  'bar': '🍸',
+  'restaurant': '🍽️',
+  'spectacles / concerts / sorties': '🎭',
+  'trajets': '🚗',
+  'hébergement': '🏨',
+  'activités / loisirs': '🎨',
+  'anniversaires / noël': '🎂',
+  'mariages / évènements / invitations': '💍',
+  'autres divers': '🔹',
+  'administratif (cni, courrier, fournitures, etc.)': '🗂️'
+};
+
+const CATEGORIES_DEPENSE_GROUPES = {
+  'Logement': { icon:'🏠', items:['Charges de copropriété','Electricité','Gaz','Mensualité prêt immobilier','Assurance prêt','Assurance habitation','Autres (Logement)','Bricolage / Travaux','Taxe foncière'] },
+  'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Assurance auto','Autres (Transport)'] },
+  'Impôts': { icon:'🧾', items:['Impôt sur le revenu','Don ASF/MCF pour écoles'] },
+  'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance','Frais bancaires','Assurance et CRM ASSENTIS','Forfait téléphone Adrien','Forfait téléphone Selma','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
+  'Alimentation': { icon:'🛒', items:['Courses alimentaires','Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
+  'Enfants': { icon:'👶', items:['Crèche','Nourriture bébé (lait, petits pots)','Couches bébé','Equipement/habits bébé'] },
+  'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Autres divers (Santé)','Remboursement Mutuelle'] },
+  'Vie quotidienne': { icon:'🧴', items:['Vêtements / chaussures','Coiffeur','Equipement maison / fourniture / déco / etc.','Hygiène, beauté, PQ','Produits entretien, etc.','Autres divers'] },
+  'Loisirs & sorties': { icon:'🎭', items:['Livres','Bar','Restaurant','Spectacles / Concerts / Sorties'] },
+  'Vacances & voyages': { icon:'✈️', items:['Trajets','Hébergement','Activités / loisirs'] },
+  'Cadeaux': { icon:'🎁', items:['Anniversaires / Noël','Mariages / évènements / invitations'] },
+  'Administratif': { icon:'🗂️', items:['Administratif (CNI, courrier, fournitures, etc.)'] }
+};
+
+const CATEGORIES_REVENU = [
+  'Salaire Adrien','Salaire Selma','Revenus ASSENTIS','CPAM','CAF',
+  'Ventes Vinted / Leboncoin','Remboursement prêt étudiant','Cadeaux',
+  'Tickets restaurant','Cheques CESU','Autres revenus'
+];
+
+// Extrait directement de l'onglet 💰 Budget (lignes 103-136, section "ÉPARGNE INVESTIE"),
+// libellés recopiés à l'identique. NOTE : 'Global Aggregate Bond' et ses voisins ainsi que
+// '€ Corp Bond ' comportent volontairement un espace final — c'est le libellé exact de la
+// cellule Budget!A130, nécessaire pour que les formules SUMIFS du Sheet (qui matchent sur
+// le texte exact de la colonne Catégorie des Transactions) retrouvent bien cette ligne.
+const CATEGORIES_EPARGNE_GROUPES = {
+  'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage'] },
+  'Cryptomonnaies': { icon:'🪙', items:['Bitcoin','Ethereum'] },
+  'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
+  'CTO — ETF actions': { icon:'📈', items:['MSCI World','S&P 500 (CTO — ETF actions)','Stoxx 600 (CTO — ETF actions)','Topix (CTO — ETF actions)','Emerging Markets (CTO — ETF actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
+  'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
+  'Or': { icon:'🥇', items:['CTO Or','Lingot or 20g (acheté à 116€/g)'] }
+};
+
+function iconForCategorie(cat, fallback) {
+  return EMOJI_CATEGORIES[normalizeCat_(cat)] || fallback || '➕';
+}
+
+// ============================================================
 // CACHE LOCAL (affichage instantané aux ouvertures suivantes)
 // ============================================================
 function cacheGet_(cle) {
@@ -236,13 +363,15 @@ function renderCompteSelect(comptesListe) {
 // Utilisée quand le serveur renvoie l'état complet (après une écriture : transaction ou feuille de route)
 function applyFullData(data) {
   comptesCharges = true;
-  objectifsCharges = true;
   renderComptesEcran(data);
-  renderRoadmap(data.feuilleDeRoute || []);
   renderCompteSelect(data.comptesListe || []);
   cacheSet_('finances_comptesData', data);
-  cacheSet_('finances_feuilleDeRoute', data.feuilleDeRoute || []);
   cacheSet_('finances_comptesListe', data.comptesListe || []);
+  if (data.feuilleDeRoute) {
+    objectifsCharges = true;
+    renderRoadmap(data.feuilleDeRoute);
+    cacheSet_('finances_feuilleDeRoute', data.feuilleDeRoute);
+  }
 }
 
 function onError(err) {
@@ -254,19 +383,29 @@ function setType(t) {
   saisieState.groupe = '';
   document.getElementById('seg-dep').classList.toggle('active', t === 'Dépense');
   document.getElementById('seg-rev').classList.toggle('active', t === 'Revenu');
+  document.getElementById('seg-epa').classList.toggle('active', t === 'Épargne');
   renderGroupesOuCategories();
 }
 
+// Générique : Dépense et Épargne ont toutes deux un niveau "groupe" (chips groupe + sous-catégories),
+// Revenu n'a qu'un niveau (liste plate de catégories).
 function renderGroupesOuCategories() {
   const groupZone = document.getElementById('group-zone');
   const chipZone = document.getElementById('chip-zone');
+  const groupLabel = document.getElementById('group-zone-label');
 
-  if (saisieState.type === 'Dépense') {
+  const groupesSource = (saisieState.type === 'Dépense') ? CATEGORIES_DEPENSE_GROUPES
+                       : (saisieState.type === 'Épargne') ? CATEGORIES_EPARGNE_GROUPES
+                       : null;
+
+  if (groupesSource) {
     groupZone.style.display = '';
-    const groupes = Object.keys(CATEGORIES_DEPENSE_GROUPES);
+    if (groupLabel) groupLabel.textContent = (saisieState.type === 'Épargne') ? "Support d'épargne" : 'Poste de dépense';
+
+    const groupes = Object.keys(groupesSource);
     document.getElementById('group-scroll').innerHTML = groupes.map(function(g) {
       return '<div class="chip ' + (saisieState.groupe===g ? 'active':'') + '" data-groupe="' + g + '" onclick="selectGroupe(this)">' +
-        '<div class="chip-stamp">' + CATEGORIES_DEPENSE_GROUPES[g].icon + '</div>' +
+        '<div class="chip-stamp">' + groupesSource[g].icon + '</div>' +
         '<div class="chip-label">' + g + '</div>' +
       '</div>';
     }).join('');
@@ -277,7 +416,7 @@ function renderGroupesOuCategories() {
       saisieState.categorie = '';
     } else {
       chipZone.style.display = '';
-      renderSousCategories(CATEGORIES_DEPENSE_GROUPES[saisieState.groupe].items);
+      renderSousCategories(groupesSource[saisieState.groupe].items, groupesSource[saisieState.groupe].icon);
     }
   } else {
     groupZone.style.display = 'none';
@@ -286,11 +425,11 @@ function renderGroupesOuCategories() {
   }
 }
 
-function renderSousCategories(items) {
+function renderSousCategories(items, fallbackIcon) {
   document.getElementById('chip-scroll').innerHTML = items.map(function(c, i) {
     return '<div class="chip ' + (i===0 ? 'active':'') + '" data-cat="' + c + '" onclick="selectChip(this)">' +
-      '<div class="chip-stamp">' + iconForCategorie(c) + '</div>' +
-      '<div class="chip-label">' + c + '</div>' +
+      '<div class="chip-stamp">' + iconForCategorie(c, fallbackIcon) + '</div>' +
+      '<div class="chip-label">' + c.trim() + '</div>' +
     '</div>';
   }).join('');
   saisieState.categorie = items[0] || '';
@@ -307,113 +446,6 @@ function selectChip(el) {
   document.querySelectorAll('#chip-scroll .chip').forEach(function(c) { c.classList.remove('active'); });
   el.classList.add('active');
   saisieState.categorie = el.getAttribute('data-cat');
-}
-
-const EMOJI_CATEGORIES = {
-  'salaire adrien': '💶',
-  'salaire selma': '💶',
-  'revenus assentis': '💼',
-  'cpam': '⚕️',
-  'caf': '👶',
-  'ventes vinted / leboncoin': '🛍️',
-  'remboursement prêt étudiant': '🎓',
-  'cadeaux': '🎁',
-  'tickets restaurant': '🍽️',
-  'cheques cesu': '🍽️',
-  'autres revenus': '💰',
-  'charges de copropriété': '🏢',
-  'electricité': '💡',
-  'gaz': '🔥',
-  'mensualité prêt immobilier': '🏠',
-  'assurance prêt': '🛡️',
-  'assurance habitation': '🏚️',
-  'taxe foncière': '🏛️',
-  'autres (logement)': '🏠',
-  'carburant': '⛽',
-  'train / avion / bus / taxi': '🚆',
-  'péage': '🛣️',
-  'stationnement': '🅿️',
-  'contraventions': '🚨',
-  'transports en commun': '🚌',
-  'entretien, réparations': '🔧',
-  'assurance auto': '🚌',
-  'autres (transport)': '🚕',
-  'impôt sur le revenu': '🧾',
-  'don asf/mcf pour écoles': '🎗️',
-  'prévoyance': '🛟',
-  'frais bancaires': '🏦',
-  'assurance et crm assentis': '📇',
-  'forfait téléphone adrien': '📱',
-  'forfait téléphone selma': '📱',
-  'crèche': '🍼',
-  'sport (salle, club…)': '🏋️',
-  'denier du culte / paroisse': '⛪',
-  'cotisations assos / organisations politiques': '🗳️',
-  'courses alimentaires': '🛒',
-  'fruits et légumes': '🥦',
-  'viande / oeufs': '🥩',
-  'fromage et produits laitiers': '🧀',
-  'épicerie (pâtes, riz, pizzas, conserves)': '🥫',
-  'alcool': '🍷',
-  'boissons': '🥤',
-  'sucré': '🍬',
-  'apéritif': '🍿',
-  'nourriture bébé (lait, petits pots)': '🍼',
-  'couches bébé': '🧷',
-  'equipement/habits bébé': '👶',
-  'vêtements / chaussures': '👟',
-  'coiffeur': '💇',
-  'equipement maison / fourniture / déco / etc.': '🛋️',
-  'hygiène, beauté, pq': '🧴',
-  'produits entretien, etc.': '🧽',
-  'bricolage /travaux': '🛠️',
-  'médecin': '🩺',
-  'pharmacie': '💊',
-  'hôpital': '🏥',
-  'dentiste / lunettes / spécialistes': '🦷',
-  'kiné / ostéo': '💆',
-  'autres divers (santé)': '⚕️',
-  'remboursement mutuelle': '🩹',
-  'livres': '📚',
-  'bar': '🍸',
-  'restaurant': '🍽️',
-  'spectacles / concerts / sorties': '🎭',
-  'trajets': '🚗',
-  'hébergement': '🏨',
-  'activités / loisirs': '🎨',
-  'anniversaires / noël': '🎂',
-  'mariages / évènements / invitations': '💍',
-  'autres divers': '🔹',
-  'administratif (cni, courrier, fournitures, etc.)': '🗂️'
-};
-
-function normalizeCat_(s) {
-  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
-const CATEGORIES_DEPENSE_GROUPES = {
-  'Logement': { icon:'🏠', items:['Charges de copropriété','Electricité','Gaz','Mensualité prêt immobilier','Assurance prêt','Assurance habitation','Autres (Logement)','Bricolage / Travaux','Taxe foncière'] },
-  'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Assurance auto','Autres (Transport)'] },
-  'Impôts': { icon:'🧾', items:['Impôt sur le revenu','Don ASF/MCF pour écoles'] },
-  'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance','Frais bancaires','Assurance et CRM ASSENTIS','Forfait téléphone Adrien','Forfait téléphone Selma','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
-  'Alimentation': { icon:'🛒', items:['Courses alimentaires','Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
-  'Enfants': { icon:'👶', items:['Crèche','Nourriture bébé (lait, petits pots)','Couches bébé','Equipement/habits bébé'] },
-  'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Autres divers (Santé)','Remboursement Mutuelle'] },
-  'Vie quotidienne': { icon:'🧴', items:['Vêtements / chaussures','Coiffeur','Equipement maison / fourniture / déco / etc.','Hygiène, beauté, PQ','Produits entretien, etc.','Autres divers'] },
-  'Loisirs & sorties': { icon:'🎭', items:['Livres','Bar','Restaurant','Spectacles / Concerts / Sorties'] },
-  'Vacances & voyages': { icon:'✈️', items:['Trajets','Hébergement','Activités / loisirs'] },
-  'Cadeaux': { icon:'🎁', items:['Anniversaires / Noël','Mariages / évènements / invitations'] },
-  'Administratif': { icon:'🗂️', items:['Administratif (CNI, courrier, fournitures, etc.)'] }
-};
-
-const CATEGORIES_REVENU = [
-  'Salaire Adrien','Salaire Selma','Revenus ASSENTIS','CPAM','CAF',
-  'Ventes Vinted / Leboncoin','Remboursement prêt étudiant','Cadeaux',
-  'Tickets restaurant','Cheques CESU','Autres revenus'
-];
-
-function iconForCategorie(cat) {
-  return EMOJI_CATEGORIES[normalizeCat_(cat)] || '➕';
 }
 
 function soumettreTransaction() {
@@ -601,9 +633,10 @@ function renderHistorique(hasMore) {
   historiqueItems.forEach(function(t) {
     const isDep = t.type === 'Dépense';
     const sign = isDep ? '−' : '+';
-    const color = isDep ? 'var(--coral)' : 'var(--sage)';
+    const color = isDep ? 'var(--coral)' : (t.type === 'Épargne' ? 'var(--brass)' : 'var(--sage)');
+    const icone = isDep ? '💸' : (t.type === 'Épargne' ? '🪙' : '💶');
     html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
-        '<div class="acc-left"><div class="acc-icon">' + (isDep ? '💸' : '💶') + '</div>' +
+        '<div class="acc-left"><div class="acc-icon">' + icone + '</div>' +
           '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
         '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR(t.montant).replace('−','').replace('+','') + '</div>' +
       '</div>';
@@ -618,9 +651,10 @@ function ouvrirEditionTransaction(row) {
   modeEdition = { row: t.row, id: t.id };
 
   setType(t.type);
-  if (t.type === 'Dépense') {
-    const groupe = Object.keys(CATEGORIES_DEPENSE_GROUPES).find(function(g) {
-      return CATEGORIES_DEPENSE_GROUPES[g].items.some(function(i) { return i.toLowerCase() === t.categorie.toLowerCase(); });
+  if (t.type === 'Dépense' || t.type === 'Épargne') {
+    const groupesSource = (t.type === 'Dépense') ? CATEGORIES_DEPENSE_GROUPES : CATEGORIES_EPARGNE_GROUPES;
+    const groupe = Object.keys(groupesSource).find(function(g) {
+      return groupesSource[g].items.some(function(i) { return i.toLowerCase() === t.categorie.toLowerCase(); });
     });
     if (groupe) {
       saisieState.groupe = groupe;

@@ -95,6 +95,7 @@
   }
   .segmented button.active.expense{ background:var(--coral); color:#1a0d09; }
   .segmented button.active.income{ background:var(--sage); color:#0a1712; }
+  .segmented button.active.epargne{ background:var(--brass); color:#1a1408; }
 
   .amount-input-wrap{ margin:28px 24px 6px; text-align:center; position:relative; }
   .amount-input{
