@@ -336,8 +336,8 @@ const EMOJI_CATEGORIES = {
   'contraventions': '🚨',
   'transports en commun': '🚌',
   'entretien, réparations': '🔧',
+  'assurance auto': '🚌',
   'autres (transport)': '🚕',
-  'assurance auto': '🚕',
   'impôt sur le revenu': '🧾',
   'don asf/mcf pour écoles': '🎗️',
   'prévoyance': '🛟',
@@ -393,7 +393,7 @@ function normalizeCat_(s) {
 
 const CATEGORIES_DEPENSE_GROUPES = {
   'Logement': { icon:'🏠', items:['Charges de copropriété','Electricité','Gaz','Mensualité prêt immobilier','Assurance prêt','Assurance habitation','Autres (Logement)','Bricolage / Travaux','Taxe foncière'] },
-  'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Autres (Transport)','Assurance auto'] },
+  'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Assurance auto','Autres (Transport)'] },
   'Impôts': { icon:'🧾', items:['Impôt sur le revenu','Don ASF/MCF pour écoles'] },
   'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance','Frais bancaires','Assurance et CRM ASSENTIS','Forfait téléphone Adrien','Forfait téléphone Selma','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
   'Alimentation': { icon:'🛒', items:['Courses alimentaires','Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
@@ -446,9 +446,8 @@ function soumettreTransaction() {
         modeEdition = false;
         navTo('screen-historique', document.querySelector('[data-screen="screen-historique"]'));
         chargerHistorique(true);
-      } else {
-        navTo('screen-comptes', document.querySelector('[data-screen="screen-comptes"]'));
       }
+      // Nouvelle saisie : on reste volontairement sur l'écran "+" pour enchaîner d'autres saisies
       playStamp();
       resetSaisieForm();
       btn.disabled = false;
