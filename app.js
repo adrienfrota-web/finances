@@ -46,11 +46,56 @@ let modeEdition = false; // false = création ; sinon { row, id } de la transact
 let historiqueOffset = 0;
 let historiqueItems = [];
 const HISTORIQUE_LOT = 10;
+let comptesCharges = false;   // écran "Comptes" (kpis/allocation/patrimoine) déjà chargé ?
+let objectifsCharges = false; // feuille de route déjà chargée ?
 
 // ============================================================
-// CHARGEMENT INITIAL
+// CACHE LOCAL (affichage instantané aux ouvertures suivantes)
 // ============================================================
-apiGet('getComptesData').then(render).catch(onError);
+function cacheGet_(cle) {
+  try { const raw = localStorage.getItem(cle); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+}
+function cacheSet_(cle, valeur) {
+  try { localStorage.setItem(cle, JSON.stringify(valeur)); } catch (e) {}
+}
+
+// ============================================================
+// SPLASH SCREEN (durée liée au chargement réel, pas fixe)
+// ============================================================
+const SPLASH_MIN_MS = 400;
+const SPLASH_MAX_MS = 2500; // filet de sécurité si le serveur traîne
+let splashDone = false;
+const splashStart = Date.now();
+
+function cacherSplash() {
+  if (splashDone) return;
+  splashDone = true;
+  const splash = document.getElementById('splashScreen');
+  if (splash) {
+    splash.classList.add('hide');
+    setTimeout(function() { splash.remove(); }, 400);
+  }
+}
+setTimeout(cacherSplash, SPLASH_MAX_MS);
+
+// ============================================================
+// CHARGEMENT INITIAL — allégé : uniquement ce qu'il faut pour l'écran "Saisie" (par défaut)
+// Le reste (Comptes, Objectifs, Historique, Budget) se charge à la demande, au premier clic sur l'onglet.
+// ============================================================
+document.getElementById('input-date').valueAsDate = new Date();
+renderGroupesOuCategories(); // 100% local, pas besoin d'attendre le serveur
+
+const listeCache = cacheGet_('finances_comptesListe');
+if (listeCache) renderCompteSelect(listeCache);
+
+apiGet('getComptesListe').then(function(comptesListe) {
+  renderCompteSelect(comptesListe);
+  cacheSet_('finances_comptesListe', comptesListe);
+  const attente = Date.now() - splashStart;
+  setTimeout(cacherSplash, Math.max(0, SPLASH_MIN_MS - attente));
+}).catch(function(err) {
+  if (!listeCache) { onError(err); cacherSplash(); }
+});
 
 function fmtEUR(v) {
   if (v === '' || v === undefined || v === null) return '—';
@@ -85,8 +130,32 @@ function navTo(screenId, btn) {
   showScreen(screenId);
   document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
   if (btn) btn.classList.add('active');
+  if (screenId === 'screen-comptes' && !comptesCharges) chargerComptes();
+  if (screenId === 'screen-objectifs' && !objectifsCharges) chargerObjectifs();
   if (screenId === 'screen-historique') chargerHistorique(true);
   if (screenId === 'screen-budget') chargerBudget();
+}
+
+function chargerComptes() {
+  const cache = cacheGet_('finances_comptesData');
+  if (cache) renderComptesEcran(cache);
+  apiGet('getComptesData').then(function(data) {
+    comptesCharges = true;
+    renderComptesEcran(data);
+    renderCompteSelect(data.comptesListe || []);
+    cacheSet_('finances_comptesData', data);
+    cacheSet_('finances_comptesListe', data.comptesListe || []);
+  }).catch(function(err) { if (!cache) onError(err); });
+}
+
+function chargerObjectifs() {
+  const cache = cacheGet_('finances_feuilleDeRoute');
+  if (cache) renderRoadmap(cache);
+  apiGet('getFeuilleDeRoute').then(function(items) {
+    objectifsCharges = true;
+    renderRoadmap(items);
+    cacheSet_('finances_feuilleDeRoute', items);
+  }).catch(function(err) { if (!cache) onError(err); });
 }
 
 function showScreen(id) {
@@ -105,9 +174,9 @@ function nouvelleSaisie() {
   navTo('screen-saisie', null);
 }
 
-function render(data) {
+function renderComptesEcran(data) {
   try {
-    document.getElementById('loading-tag').textContent = data.nomFichier;
+    document.getElementById('loading-tag').textContent = data.nomFichier || 'Finances';
     document.getElementById('sub-title').textContent = 'Adrien & Selma';
 
     document.getElementById('valeur-nette').innerHTML = fmtEUR(data.kpis.valeurNette).replace(' €','') + ' <sup>€</sup>';
@@ -117,7 +186,6 @@ function render(data) {
     const bilanVal = Number(data.kpis.bilanAssentis);
     bilanEl.textContent = fmtEUR(data.kpis.bilanAssentis);
     bilanEl.style.color = (bilanVal < 0) ? 'var(--coral)' : '';
-    renderRoadmap(data.feuilleDeRoute || []);
 
     let allocHtml = '';
     (data.allocation.lignes || []).forEach(function(l) {
@@ -153,19 +221,28 @@ function render(data) {
       html += '</div>';
     });
     document.getElementById('comptes-container').innerHTML = html;
-
-    const compteSelect = document.getElementById('input-compte');
-    const comptesListe = data.comptesListe || [];
-    compteSelect.innerHTML = comptesListe.map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
-    const defaultCompte = comptesListe.find(function(c) { return c.toLowerCase().includes('trade republic'); });
-    if (defaultCompte && !modeEdition) compteSelect.value = defaultCompte;
-    if (!document.getElementById('input-date').value) {
-      document.getElementById('input-date').valueAsDate = new Date();
-    }
-    renderGroupesOuCategories();
   } catch (e) {
     document.getElementById('loading-tag').textContent = '⚠ render: ' + e.message;
   }
+}
+
+function renderCompteSelect(comptesListe) {
+  const compteSelect = document.getElementById('input-compte');
+  compteSelect.innerHTML = (comptesListe || []).map(function(c) { return '<option value="' + c + '">' + c + '</option>'; }).join('');
+  const defaultCompte = (comptesListe || []).find(function(c) { return c.toLowerCase().includes('trade republic'); });
+  if (defaultCompte && !modeEdition) compteSelect.value = defaultCompte;
+}
+
+// Utilisée quand le serveur renvoie l'état complet (après une écriture : transaction ou feuille de route)
+function applyFullData(data) {
+  comptesCharges = true;
+  objectifsCharges = true;
+  renderComptesEcran(data);
+  renderRoadmap(data.feuilleDeRoute || []);
+  renderCompteSelect(data.comptesListe || []);
+  cacheSet_('finances_comptesData', data);
+  cacheSet_('finances_feuilleDeRoute', data.feuilleDeRoute || []);
+  cacheSet_('finances_comptesListe', data.comptesListe || []);
 }
 
 function onError(err) {
@@ -265,7 +342,8 @@ const EMOJI_CATEGORIES = {
   'prévoyance': '🛟',
   'frais bancaires': '🏦',
   'assurance et crm assentis': '📇',
-  'forfait téléphone': '📱',
+  'forfait téléphone adrien': '📱',
+  'forfait téléphone selma': '📱',
   'crèche': '🍼',
   'sport (salle, club…)': '🏋️',
   'denier du culte / paroisse': '⛪',
@@ -316,7 +394,7 @@ const CATEGORIES_DEPENSE_GROUPES = {
   'Logement': { icon:'🏠', items:['Charges de copropriété','Electricité','Gaz','Mensualité prêt immobilier','Assurance prêt','Assurance habitation','Autres (Logement)','Bricolage / Travaux','Taxe foncière'] },
   'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Autres (Transport)'] },
   'Impôts': { icon:'🧾', items:['Impôt sur le revenu','Don ASF/MCF pour écoles'] },
-  'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance','Frais bancaires','Assurance et CRM ASSENTIS','Forfait téléphone','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
+  'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance','Frais bancaires','Assurance et CRM ASSENTIS','Forfait téléphone Adrien','Forfait téléphone Selma','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
   'Alimentation': { icon:'🛒', items:['Courses alimentaires','Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
   'Enfants': { icon:'👶', items:['Crèche','Nourriture bébé (lait, petits pots)','Couches bébé','Equipement/habits bébé'] },
   'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Autres divers (Santé)','Remboursement Mutuelle'] },
@@ -362,7 +440,7 @@ function soumettreTransaction() {
 
   apiPost(enEdition ? 'modifierTransaction' : 'enregistrerTransaction', payload)
     .then(function(data) {
-      render(data);
+      applyFullData(data);
       if (enEdition) {
         modeEdition = false;
         navTo('screen-historique', document.querySelector('[data-screen="screen-historique"]'));
@@ -466,7 +544,7 @@ function deleteRoadmapItemUI(btn) {
   }
   const row = btn.getAttribute('data-row');
   apiPost('deleteRoadmapItem', { row: row })
-    .then(function(data) { render(data); })
+    .then(function(data) { applyFullData(data); })
     .catch(function(err) { alertInline('Erreur : ' + err.message); });
 }
 
@@ -474,7 +552,7 @@ function addRoadmapItemUI() {
   const texte = document.getElementById('new-roadmap-texte').value.trim();
   if (!texte) return;
   apiPost('addRoadmapItem', { texte: texte, statut: 'FUTUR' })
-    .then(function(data) { render(data); playStamp(); })
+    .then(function(data) { applyFullData(data); playStamp(); })
     .catch(function(err) { alertInline('Erreur : ' + err.message); });
 }
 
@@ -491,7 +569,7 @@ function saveRoadmapItem(el) {
 
   apiPost('updateRoadmapItem', { row: row, texte: texte, statut: statut })
     .then(function(data) {
-      render(data);
+      applyFullData(data);
       playStamp();
     })
     .catch(function(err) { alertInline('Erreur : ' + err.message); });
@@ -619,14 +697,3 @@ function toggleBudgetGroupe(idx) {
   const el = document.getElementById('budget-detail-' + idx);
   el.style.display = (el.style.display === 'none') ? '' : 'none';
 }
-
-// ============================================================
-// SPLASH SCREEN
-// ============================================================
-setTimeout(function() {
-  const splash = document.getElementById('splashScreen');
-  if (splash) {
-    splash.classList.add('hide');
-    setTimeout(function() { splash.remove(); }, 400);
-  }
-}, 1300);
