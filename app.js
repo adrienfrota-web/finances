@@ -70,7 +70,7 @@ const EMOJI_CATEGORIES = {
   'cadeaux': '🎁',
   'tickets restaurant': '🍽️',
   'cheques cesu': '🍽️',
-  'autres revenus': '💰',
+  'autres revenus': '➕',
   'charges de copropriété': '🏢',
   'electricité': '💡',
   'gaz': '🔥',
@@ -78,7 +78,7 @@ const EMOJI_CATEGORIES = {
   'assurance prêt': '🛡️',
   'assurance habitation': '🏚️',
   'taxe foncière': '🏛️',
-  'autres (logement)': '🏠',
+  'autres (logement)': '➕',
   'carburant': '⛽',
   'train / avion / bus / taxi': '🚆',
   'péage': '🛣️',
@@ -86,8 +86,8 @@ const EMOJI_CATEGORIES = {
   'contraventions': '🚨',
   'transports en commun': '🚌',
   'entretien, réparations': '🔧',
-  'assurance auto': '🚌',
-  'autres (transport)': '🚕',
+  'assurance auto': '🚕',
+  'autres (transport)': '➕',
   'impôt sur le revenu': '🧾',
   'don asf/mcf pour écoles': '🎗️',
   'prévoyance': '🛟',
@@ -122,7 +122,7 @@ const EMOJI_CATEGORIES = {
   'hôpital': '🏥',
   'dentiste / lunettes / spécialistes': '🦷',
   'kiné / ostéo': '💆',
-  'autres divers (santé)': '⚕️',
+  'autres divers (santé)': '➕',
   'remboursement mutuelle': '🩹',
   'livres': '📚',
   'bar': '🍸',
@@ -133,7 +133,7 @@ const EMOJI_CATEGORIES = {
   'activités / loisirs': '🎨',
   'anniversaires / noël': '🎂',
   'mariages / évènements / invitations': '💍',
-  'autres divers': '🔹',
+  'autres divers': '➕',
   'administratif (cni, courrier, fournitures, etc.)': '🗂️'
 };
 
@@ -169,7 +169,7 @@ const CATEGORIES_EPARGNE_GROUPES = {
   'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
   'CTO — ETF actions': { icon:'📈', items:['MSCI World','S&P 500 (CTO — ETF actions)','Stoxx 600 (CTO — ETF actions)','Topix (CTO — ETF actions)','Emerging Markets (CTO — ETF actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
   'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
-  'Or': { icon:'🥇', items:['CTO Or','Lingot or 20g (acheté à 116€/g)'] }
+  'Or': { icon:'🥇', items:['CTO Or','Lingot or 20g'] }
 };
 
 function iconForCategorie(cat, fallback) {
@@ -237,7 +237,7 @@ function iconFor(label) {
   if (l.includes('livret') || l.includes('csl') || l.includes('ldds')) return '📘';
   if (l.includes('cash de secours')) return '💵';
   if (l.includes('fonds €') || l.includes('assurance')) return '🛡️';
-  if (l.includes('gold') || l.includes('lingotin')) return '🥇';
+  if (l.includes('gold') || l.includes('lingotin')|| l.includes('lingot')) return '🥇';
   if (l.includes('scpi')) return '🏢';
   if (l.includes('obligation')) return '📜';
   if (l.includes('résidence') || l.includes('prêt immobilier') || l.includes('mensualité')) return '🏠';
