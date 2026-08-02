@@ -165,7 +165,6 @@ const CATEGORIES_REVENU = [
 // le texte exact de la colonne Catégorie des Transactions) retrouvent bien cette ligne.
 const CATEGORIES_EPARGNE_GROUPES = {
   'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage'] },
-  'Cryptomonnaies': { icon:'🪙', items:['Bitcoin','Ethereum'] },
   'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
   'CTO — ETF actions': { icon:'📈', items:['MSCI World','S&P 500 (CTO — ETF actions)','Stoxx 600 (CTO — ETF actions)','Topix (CTO — ETF actions)','Emerging Markets (CTO — ETF actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
   'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
