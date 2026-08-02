@@ -121,8 +121,8 @@ const EMOJI_CATEGORIES = {
   'hôpital': '🏥',
   'dentiste / lunettes / spécialistes': '🦷',
   'kiné / ostéo': '💆',
-  'autres divers (santé)': '➕',
   'remboursement mutuelle': '🩹',
+  'autres divers (santé)': '➕',
   'livres': '📚',
   'bar': '🍸',
   'restaurant': '🍽️',
@@ -137,13 +137,13 @@ const EMOJI_CATEGORIES = {
 };
 
 const CATEGORIES_DEPENSE_GROUPES = {
-  'Logement': { icon:'🏠', items:['Charges de copropriété','Electricité','Gaz','Mensualité prêt immobilier','Assurance prêt','Assurance habitation','Autres (Logement)','Bricolage / Travaux','Taxe foncière'] },
+  'Logement': { icon:'🏠', items:['Charges de copropriété','Electricité','Gaz','Mensualité prêt immobilier','Assurance prêt','Assurance habitation','Bricolage / Travaux','Taxe foncière','Autres (Logement)'] },
   'Transport': { icon:'🚗', items:['Carburant','Train / avion / bus / taxi','Péage','Stationnement','Contraventions','Transports en commun','Entretien, réparations','Assurance auto','Autres (Transport)'] },
   'Impôts': { icon:'🧾', items:['Impôt sur le revenu','Don ASF/MCF pour écoles'] },
   'Abonnements & cotisations': { icon:'🔁', items:['Prévoyance','Frais bancaires','Assurance et CRM ASSENTIS','Forfait téléphone Adrien','Forfait téléphone Selma','Sport (salle, club…)','Cotisations assos / organisations politiques','Denier du culte / paroisse'] },
   'Alimentation': { icon:'🛒', items:['Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
   'Enfants': { icon:'👶', items:['Crèche','Nourriture bébé (lait, petits pots)','Couches bébé','Equipement/habits bébé'] },
-  'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Autres divers (Santé)','Remboursement Mutuelle'] },
+  'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Remboursement Mutuelle','Autres divers (Santé)'] },
   'Vie quotidienne': { icon:'🧴', items:['Vêtements / chaussures','Coiffeur','Equipement maison / fourniture / déco / etc.','Hygiène, beauté, PQ','Produits entretien, etc.','Autres divers'] },
   'Loisirs & sorties': { icon:'🎭', items:['Livres','Bar','Restaurant','Spectacles / Concerts / Sorties'] },
   'Vacances & voyages': { icon:'✈️', items:['Trajets','Hébergement','Activités / loisirs'] },
