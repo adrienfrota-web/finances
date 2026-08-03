@@ -230,15 +230,15 @@ function fmtEUR(v) {
 
 function iconFor(label) {
   const l = (label || '').toLowerCase();
-  if (l.includes('lep')) return '📙';
   if (l.includes('livret') || l.includes('csl') || l.includes('ldds')) return '📘';
+  if (l.includes('lep')) return '📙';
   if (l.includes('cash de secours')) return '💵';
   if (l.includes('fonds €') || l.includes('assurance')) return '🛡️';
   if (l.includes('gold') || l.includes('lingotin')|| l.includes('lingot')|| l.includes('or')) return '🥇';
   if (l.includes('scpi')) return '🏢';
   if (l.includes('obligation')) return '📜';
   if (l.includes('résidence') || l.includes('prêt immobilier') || l.includes('mensualité')) return '🏠';
-  if (l.includes('locatif')) return '🏘️';
+  if (l.includes('immobilier')) return '🏘️';
   if (l.includes('climat') || l.includes('ingerop')) return '📊';
   if (l.includes('msci') || l.includes('invexo')) return '📈';
   if (l.includes('pea')) return '📊';
