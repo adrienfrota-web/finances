@@ -9,33 +9,62 @@ window.onerror = function(msg) {
 const API_BASE_URL = 'https://script.google.com/macros/s/AKfycby8xjgcmphN3uhq7TbXwRaai2xsrNroM8wMetaQpmKOsprC0hjLZ9WPvdsokGIAHsC3/exec';
 const API_TOKEN = 'ezafzgerhgerdsfefe4fef4e5de5dfef74ezDF634EFCE879E';
 
-function apiGet(action, extraParams) {
+function fetchJSON_(url, options) {
+  return fetch(url, options)
+    .then(function(r) { return r.text(); })
+    .then(function(text) {
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        // Réponse non-JSON (typiquement une page d'erreur de livraison Google, intermittente).
+        throw new Error('__INVALID_JSON__');
+      }
+    });
+}
+
+function apiGet(action, extraParams, tentative) {
+  tentative = tentative || 1;
   let url = API_BASE_URL + '?action=' + encodeURIComponent(action) + '&token=' + encodeURIComponent(API_TOKEN);
   if (extraParams) {
     Object.keys(extraParams).forEach(function(k) {
       url += '&' + encodeURIComponent(k) + '=' + encodeURIComponent(extraParams[k]);
     });
   }
-  return fetch(url)
-    .then(function(r) { return r.json(); })
-    .then(function(json) {
-      if (!json.success) throw new Error(json.error || 'Erreur API');
-      return json.data;
-    });
+  return fetchJSON_(url).then(function(json) {
+    if (!json.success) throw new Error(json.error || 'Erreur API');
+    return json.data;
+  }).catch(function(err) {
+    // Lecture seule : sans risque à rejouer, on retente une fois automatiquement
+    // en cas de réponse non-JSON avant de remonter l'erreur à l'utilisateur.
+    if (err.message === '__INVALID_JSON__' && tentative < 2) {
+      return new Promise(function(resolve) { setTimeout(resolve, 800); })
+        .then(function() { return apiGet(action, extraParams, tentative + 1); });
+    }
+    if (err.message === '__INVALID_JSON__') {
+      throw new Error('Réponse invalide du serveur après plusieurs tentatives, réessaie dans un instant');
+    }
+    throw err;
+  });
 }
 
 function apiPost(action, payload) {
   const body = Object.assign({}, payload, { token: API_TOKEN });
-  return fetch(API_BASE_URL + '?action=' + encodeURIComponent(action), {
+  return fetchJSON_(API_BASE_URL + '?action=' + encodeURIComponent(action), {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(body)
-  })
-    .then(function(r) { return r.json(); })
-    .then(function(json) {
-      if (!json.success) throw new Error(json.error || 'Erreur API');
-      return json.data;
-    });
+  }).then(function(json) {
+    if (!json.success) throw new Error(json.error || 'Erreur API');
+    return json.data;
+  }).catch(function(err) {
+    // Écriture : JAMAIS de retry automatique ici. Le diagnostic précédent a montré qu'une
+    // réponse non-JSON peut survenir alors que le script s'est bien exécuté côté serveur —
+    // l'écriture a donc pu réussir malgré tout. Rejouer l'appel risquerait un doublon.
+    if (err.message === '__INVALID_JSON__') {
+      throw new Error("Réponse invalide du serveur : l'écriture a peut-être quand même réussi. Vérifie l'historique avant de ressaisir.");
+    }
+    throw err;
+  });
 }
 
 // ============================================================
@@ -683,19 +712,32 @@ function saveRoadmapItem(el) {
 // HISTORIQUE
 // ============================================================
 function chargerHistorique(reset) {
+  let cache = null;
   if (reset) {
     historiqueOffset = 0;
     historiqueItems = [];
-    document.getElementById('historique-container').innerHTML = '<div class="roadmap-empty">Chargement...</div>';
-    document.getElementById('historique-charger-plus').style.display = 'none';
+    cache = cacheGet_('finances_historique_p1');
+    if (cache) {
+      historiqueItems = cache.transactions;
+      renderHistorique(cache.hasMore);
+    } else {
+      document.getElementById('historique-container').innerHTML = '<div class="roadmap-empty">Chargement...</div>';
+      document.getElementById('historique-charger-plus').style.display = 'none';
+    }
   }
-  apiGet('getTransactions', { offset: historiqueOffset, limit: HISTORIQUE_LOT })
+  const offsetAppel = reset ? 0 : historiqueOffset;
+  apiGet('getTransactions', { offset: offsetAppel, limit: HISTORIQUE_LOT })
     .then(function(data) {
-      historiqueItems = historiqueItems.concat(data.transactions);
-      historiqueOffset += data.transactions.length;
+      if (reset) {
+        historiqueItems = data.transactions;
+        cacheSet_('finances_historique_p1', data);
+      } else {
+        historiqueItems = historiqueItems.concat(data.transactions);
+      }
+      historiqueOffset = offsetAppel + data.transactions.length;
       renderHistorique(data.hasMore);
     })
-    .catch(onError);
+    .catch(function(err) { if (!cache) onError(err); });
 }
 
 function chargerPlusHistorique() { chargerHistorique(false); }
@@ -754,7 +796,12 @@ function ouvrirEditionTransaction(row) {
 // BUDGET
 // ============================================================
 function chargerBudget() {
-  apiGet('getBudgetParGroupe').then(renderBudget).catch(onError);
+  const cache = cacheGet_('finances_budget');
+  if (cache) renderBudget(cache);
+  apiGet('getBudgetParGroupe').then(function(data) {
+    renderBudget(data);
+    cacheSet_('finances_budget', data);
+  }).catch(function(err) { if (!cache) onError(err); });
 }
 
 function renderBudget(data) {
