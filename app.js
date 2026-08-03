@@ -132,7 +132,7 @@ const EMOJI_CATEGORIES = {
   'anniversaires / noël': '🎁',
   'mariages / évènements / invitations': '🎉',
   'autres divers': '➕',
-  'administratif (cni, courrier, fournitures, etc.)': '🗂️'
+  'cni, courrier, fournitures, etc.': '🗂️'
 };
 
 const CATEGORIES_DEPENSE_GROUPES = {
@@ -147,7 +147,7 @@ const CATEGORIES_DEPENSE_GROUPES = {
   'Loisirs & sorties': { icon:'🎭', items:['Livres','Bar','Restaurant','Spectacles / Concerts / Sorties'] },
   'Vacances & voyages': { icon:'✈️', items:['Trajets','Hébergement','Activités / loisirs'] },
   'Cadeaux': { icon:'🎁', items:['Anniversaires / Noël','Mariages / évènements / invitations'] },
-  'Administratif': { icon:'🗂️', items:['Administratif (CNI, courrier, fournitures, etc.)'] }
+  'Administratif': { icon:'🗂️', items:['CNI, courrier, fournitures, etc.'] }
 };
 
 const CATEGORIES_REVENU = [
@@ -164,7 +164,7 @@ const CATEGORIES_REVENU = [
 const CATEGORIES_EPARGNE_GROUPES = {
   'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage'] },
   'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
-  'CTO — ETF actions': { icon:'📈', items:['MSCI World','S&P 500 (CTO — ETF actions)','Stoxx 600 (CTO — ETF actions)','Topix (CTO — ETF actions)','Emerging Markets (CTO — ETF actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
+  'CTO — Actions': { icon:'📈', items:['MSCI World','Emerging Markets (CTO — Actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
   'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
   'Or': { icon:'🥇', items:['CTO Or','Lingot or 20g'] }
 };
@@ -296,8 +296,8 @@ const ICONS = {
   "CTO Raphaël - FTSE All World": "📈",
 
   // Crypto
-  "Bitcoin": "🪙",
-  "Ethereum": "🪙",
+  "Bitcoin": "₿",
+  "Ethereum": "𖢻",
 
   // Or physique
   "Lingotin 20g": "🥇",
@@ -707,7 +707,7 @@ function renderHistorique(hasMore) {
     const isDep = t.type === 'Dépense';
     const sign = isDep ? '−' : '+';
     const color = isDep ? 'var(--coral)' : (t.type === 'Épargne' ? 'var(--brass)' : 'var(--sage)');
-    const icone = isDep ? '💸' : (t.type === 'Épargne' ? '🪙' : '💶');
+    const icone = isDep ? '💸' : (t.type === 'Épargne' ? '🐷' : '💶');
     html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
         '<div class="acc-left"><div class="acc-icon">' + icone + '</div>' +
           '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
