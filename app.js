@@ -131,7 +131,6 @@ const EMOJI_CATEGORIES = {
   'activités / loisirs': '🎨',
   'anniversaires / noël': '🎁',
   'mariages / évènements / invitations': '🎉',
-  'autres divers': '➕',
   'cni, courrier, fournitures, etc.': '🗂️'
 };
 
@@ -143,7 +142,7 @@ const CATEGORIES_DEPENSE_GROUPES = {
   'Alimentation': { icon:'🛒', items:['Fruits et légumes','Viande / oeufs','Fromage et produits laitiers','Épicerie (pâtes, riz, pizzas, conserves)','Alcool','Boissons','Sucré','Apéritif'] },
   'Enfants': { icon:'👶', items:['Crèche','Nourriture bébé (lait, petits pots)','Couches bébé','Equipement/habits bébé'] },
   'Santé': { icon:'⚕️', items:['Médecin','Pharmacie','Hôpital','Dentiste / lunettes / spécialistes','Kiné / Ostéo','Remboursement Mutuelle','Autres divers (Santé)'] },
-  'Vie quotidienne': { icon:'🧴', items:['Vêtements / chaussures','Coiffeur','Equipement maison / fourniture / déco / etc.','Hygiène, beauté, PQ','Produits entretien, etc.','Autres divers'] },
+  'Vie quotidienne': { icon:'🧴', items:['Vêtements / chaussures','Coiffeur','Equipement maison / fourniture / déco / etc.','Hygiène, beauté, PQ','Produits entretien, etc.'] },
   'Loisirs & sorties': { icon:'🎭', items:['Livres','Bar','Restaurant','Spectacles / Concerts / Sorties'] },
   'Vacances & voyages': { icon:'✈️', items:['Trajets','Hébergement','Activités / loisirs'] },
   'Cadeaux': { icon:'🎁', items:['Anniversaires / Noël','Mariages / évènements / invitations'] },
