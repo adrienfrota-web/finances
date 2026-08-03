@@ -234,7 +234,7 @@ function iconFor(label) {
   if (l.includes('livret') || l.includes('csl') || l.includes('ldds')) return '📘';
   if (l.includes('cash de secours')) return '💵';
   if (l.includes('fonds €') || l.includes('assurance')) return '🛡️';
-  if (l.includes('gold') || l.includes('lingotin')|| l.includes('lingot')) return '🥇';
+  if (l.includes('gold') || l.includes('lingotin')|| l.includes('lingot')|| l.includes('or')) return '🥇';
   if (l.includes('scpi')) return '🏢';
   if (l.includes('obligation')) return '📜';
   if (l.includes('résidence') || l.includes('prêt immobilier') || l.includes('mensualité')) return '🏠';
