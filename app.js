@@ -228,26 +228,102 @@ function fmtEUR(v) {
   return n.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €';
 }
 
+const ICONS = {
+  // Catégories
+  "Liquidités": "🏦",
+  "Livrets (hors LEP)": "📘",
+  "LEP": "📙",
+  "Fonds €": "🛡️",
+  "Or": "🥇",
+  "SCPI": "🏢",
+  "Obligations (CTO)": "📜",
+  "Immobilier (RP)": "🏠",
+  "Immobilier locatif": "🏘️",
+  "Actions — PEE": "📈",
+  "Actions — PEA": "📊",
+  "Actions — CTO": "📈",
+  "Private Equity (AV)": "🚀",
+  "Crowdlending": "🤝",
+  "Cryptomonnaies": "🪙",
+
+  // Comptes
+  "BNP Joint": "🏦",
+  "Bourso Adrien": "🏦",
+  "Bourso compte joint": "🏦",
+  "Bourso Raphael": "🏦",
+  "Trade Republic Adrien": "🏦",
+  "Cash de secours": "💵",
+
+  // Livrets
+  "BNP Livret A Selma": "📘",
+  "BNP Livret A Adrien": "📘",
+  "BNP LDDS Adrien": "📘",
+  "BNP LEP Adrien": "📙",
+  "Bourso CSL Jeune Raphaël": "📘",
+
+  // Assurance-vie
+  "GMF - Multéo - Adrien": "🛡️",
+  "MAAF Vie - Winalto - Adrien": "🛡️",
+  "CARDIF - Lucya - Adrien": "🛡️",
+  "Linxea Spirit 2 - Selma - Fonds euros": "🛡️",
+  "Linxea Spirit 2 - Selma - SCPI Iroko Zen": "🏢",
+  "Linxea Spirit 2 - Selma - Private Equity (Eurazéo, Nexstage)": "🚀",
+
+  // PEA
+  "Boursobank PEA Selma": "📊",
+  "Trade Republic PEA Adrien - S&P 500": "📊",
+  "Trade Republic PEA Adrien - Easy Stoxx 600": "📊",
+  "Trade Republic PEA Adrien - Topix": "📊",
+  "Trade Republic PEA Adrien - Emerging Markets": "📊",
+  "Trade Republic PEA Adrien - MSCI EMU Small Caps": "📊",
+
+  // CTO
+  "iShares Physical Gold ETC": "🥇",
+  "Invexo MSCI World": "📈",
+  "S&P 500 CTO": "📈",
+  "Easy Stoxx 600 CTO": "📈",
+  "Topix CTO": "📈",
+  "Emerging Markets CTO": "📈",
+  "MSCI World Energy CTO": "📈",
+  "Edge World Quality Factor CTO": "📈",
+  "MSCI World Small Cap CTO": "📈",
+  "LPX Private Equity CTO": "📈",
+  "Obligations mondiales CTO": "📜",
+  "Obligations entreprises européennes CTO": "📜",
+  "Obligations high yield USD CTO": "📜",
+  "Obligations état € indexées inflation CTO": "📜",
+  "CTO Raphaël - S&P 500": "📈",
+  "CTO Raphaël - FTSE All World": "📈",
+
+  // Crypto
+  "Bitcoin": "🪙",
+  "Ethereum": "🪙",
+
+  // Or physique
+  "Lingotin 20g": "🥇",
+
+  // Crowdlending
+  "Indemo": "🤝",
+  "Mintos": "🤝",
+  "La Première Brique": "🤝",
+
+  // PEE
+  "CLIMAT — disponible 01/06/2028": "📈",
+  "INGEROP — disponible 01/06/2028": "📈",
+  "CLIMAT — disponible 01/06/2029": "📈",
+  "INGEROP — disponible 01/06/2029": "📈",
+  "INGEROP — disponible 01/06/2030": "📈",
+  "CLIMAT — disponible 01/06/2030": "📈",
+  "INGEROP — disponible 01/06/2031": "📈",
+
+  // Immobilier
+  "Résidence Bellevue": "🏠",
+  "Prêt immobilier Appartement Bellevue": "🏦",
+  "Mensualité": "💸",
+};
+
 function iconFor(label) {
-  const l = (label || '').toLowerCase();
-  if (l.includes('livret') || l.includes('csl') || l.includes('ldds')) return '📘';
-  if (l.includes('lep')) return '📙';
-  if (l.includes('cash de secours')) return '💵';
-  if (l.includes('fonds €') || l.includes('assurance')) return '🛡️';
-  if (l.includes('gold') || l.includes('lingotin')|| l.includes('lingot')|| l.includes('or')) return '🥇';
-  if (l.includes('scpi')) return '🏢';
-  if (l.includes('obligation')) return '📜';
-  if (l.includes('résidence') || l.includes('prêt immobilier') || l.includes('mensualité')) return '🏠';
-  if (l.includes('immobilier')) return '🏘️';
-  if (l.includes('climat') || l.includes('ingerop')) return '📊';
-  if (l.includes('msci') || l.includes('invexo')) return '📈';
-  if (l.includes('pea')) return '📊';
-  if (l.includes('cto') || l.includes('actions')) return '📈';
-  if (l.includes('private equity')) return '🚀';
-  if (l.includes('crowdlending') || l.includes('créances')) return '🤝';
-  if (l.includes('crypto') || l.includes('bitcoin') || l.includes('ethereum')) return '🪙';
-  if (l.includes('bnp') || l.includes('bourso') || l.includes('boursorama') || l.includes('trade republic') || l.includes('liquidité')) return '🏦';
-  return '💼';
+  return ICONS[label] ?? "💼";
 }
 
 function navTo(screenId, btn) {
