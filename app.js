@@ -446,10 +446,19 @@ function renderComptesEcran(data) {
       bySection[c.section].push(c);
     });
     let html = '';
+    // Tout compte est modifiable en ligne, SAUF ceux listés ici explicitement (comparaison
+    // insensible à la casse et aux espaces superflus). Doit rester synchronisé avec
+    // COMPTES_NON_MODIFIABLES_ côté Code.gs, qui reste le garde-fou faisant foi.
+    const COMPTES_NON_MODIFIABLES = [
+      'bnp joint', 'bourso adrien', 'bourso compte joint', 'bourso raphael',
+      'cardif - lucya - adrien', 'linxea spirit 2 - selma - fonds euros',
+      'bitcoin', 'ethereum', 'lingotin 20g', 'résidence bellevue',
+      'prêt immobilier appartement bellevue', 'mensualité'
+    ];
     Object.keys(bySection).forEach(function(section) {
-      const editable = section.toUpperCase() === 'LIQUIDITÉS' || section.toUpperCase() === 'PEA';
       html += '<div class="section-title">' + section + '</div><div class="accounts">';
       bySection[section].forEach(function(c) {
+        const editable = COMPTES_NON_MODIFIABLES.indexOf(c.nom.trim().toLowerCase()) === -1;
         const amountHtml = editable
           ? '<input class="acc-amount acc-amount-input" type="text" inputmode="decimal" ' +
               'data-nom="' + escapeHtml_(c.nom) + '" value="' + String(c.valeur).replace('.', ',') + '" ' +
@@ -783,11 +792,37 @@ function renderHistorique(hasMore) {
     html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
         '<div class="acc-left"><div class="acc-icon">' + icone + '</div>' +
           '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
-        '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR2(t.montant).replace('−','').replace('+','') + '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR2(t.montant).replace('−','').replace('+','') + '</div>' +
+          '<button class="roadmap-delete" data-row="' + t.row + '" data-confirm="0" onclick="event.stopPropagation(); supprimerTransactionUI(this)" title="Supprimer">✕</button>' +
+        '</div>' +
       '</div>';
   });
   document.getElementById('historique-container').innerHTML = html || '<div class="roadmap-empty">Aucune transaction</div>';
   document.getElementById('historique-charger-plus').style.display = hasMore ? '' : 'none';
+}
+
+function supprimerTransactionUI(btn) {
+  if (btn.getAttribute('data-confirm') !== '1') {
+    btn.setAttribute('data-confirm', '1');
+    btn.textContent = '✓?';
+    btn.style.color = 'var(--coral)';
+    setTimeout(function() {
+      if (btn.isConnected) {
+        btn.setAttribute('data-confirm', '0');
+        btn.textContent = '✕';
+        btn.style.color = '';
+      }
+    }, 2500);
+    return;
+  }
+  const row = btn.getAttribute('data-row');
+  apiPost('supprimerTransaction', { row: row })
+    .then(function(data) {
+      applyFullData(data);
+      chargerHistorique(true); // recharge complète : les numéros de ligne du dessous ont décalé
+    })
+    .catch(function(err) { alertInline('Erreur : ' + err.message); });
 }
 
 function ouvrirEditionTransaction(row) {
