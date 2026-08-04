@@ -256,6 +256,15 @@ function fmtEUR(v) {
   return n.toLocaleString('fr-FR', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' €';
 }
 
+// Variante à 2 décimales, utilisée uniquement dans l'Historique (demande explicite),
+// pour ne pas changer l'arrondi affiché ailleurs (KPI, allocation, comptes, budget).
+function fmtEUR2(v) {
+  if (v === '' || v === undefined || v === null) return '—';
+  const n = Number(v);
+  if (isNaN(n)) return String(v);
+  return n.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+}
+
 const ICONS = {
   // Catégories
   "Liquidités": "🏦",
@@ -438,12 +447,19 @@ function renderComptesEcran(data) {
     });
     let html = '';
     Object.keys(bySection).forEach(function(section) {
+      const editable = section.toUpperCase() === 'LIQUIDITÉS' || section.toUpperCase() === 'PEA';
       html += '<div class="section-title">' + section + '</div><div class="accounts">';
       bySection[section].forEach(function(c) {
+        const amountHtml = editable
+          ? '<input class="acc-amount acc-amount-input" type="text" inputmode="decimal" ' +
+              'data-nom="' + escapeHtml_(c.nom) + '" value="' + String(c.valeur).replace('.', ',') + '" ' +
+              'onblur="sauvegarderValeurCompte(this)" ' +
+              'onkeydown="if(event.key===\'Enter\'){this.blur();}">'
+          : '<div class="acc-amount">' + fmtEUR(c.valeur) + '</div>';
         html += '<div class="account-row">' +
             '<div class="acc-left"><div class="acc-icon">' + iconFor(c.nom) + '</div>' +
               '<div><div class="acc-name">' + c.nom + '</div></div></div>' +
-            '<div class="acc-amount">' + fmtEUR(c.valeur) + '</div>' +
+            amountHtml +
           '</div>';
       });
       html += '</div>';
@@ -599,6 +615,21 @@ function resetSaisieForm() {
   document.getElementById('input-date').valueAsDate = new Date();
 }
 
+function sauvegarderValeurCompte(el) {
+  const nom = el.getAttribute('data-nom');
+  const valeur = Number(String(el.value).replace(',', '.'));
+  if (isNaN(valeur)) {
+    alertInline('Montant invalide.');
+    return;
+  }
+  apiPost('modifierValeurCompte', { nom: nom, valeur: valeur })
+    .then(function(data) {
+      applyFullData(data);
+      playStamp();
+    })
+    .catch(function(err) { alertInline('Erreur : ' + err.message); });
+}
+
 function playStamp() {
   const ov = document.getElementById('stampOverlay');
   ov.classList.add('show');
@@ -752,7 +783,7 @@ function renderHistorique(hasMore) {
     html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
         '<div class="acc-left"><div class="acc-icon">' + icone + '</div>' +
           '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
-        '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR(t.montant).replace('−','').replace('+','') + '</div>' +
+        '<div class="acc-amount" style="color:' + color + '">' + sign + fmtEUR2(t.montant).replace('−','').replace('+','') + '</div>' +
       '</div>';
   });
   document.getElementById('historique-container').innerHTML = html || '<div class="roadmap-empty">Aucune transaction</div>';
