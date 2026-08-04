@@ -75,6 +75,12 @@
   .acc-name{ font-size:14.5px; font-weight:500; }
   .acc-sub{ font-size:11px; color:var(--paper-dim); margin-top:1px; }
   .acc-amount{ font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; white-space:nowrap;}
+  .acc-amount-input{
+    font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600;
+    background:transparent; border:none; border-bottom:1px dashed var(--line);
+    color:var(--paper); text-align:right; width:100px; outline:none; padding:2px 0;
+  }
+  .acc-amount-input:focus{ border-bottom:1px solid var(--brass); }
 
   .crypto-mini{ display:flex; gap:6px; padding:14px 24px 4px; }
   .crypto-chip{ flex:1; background:rgba(201,162,39,0.06); border:1px solid rgba(201,162,39,0.25); border-radius:12px; padding:10px 12px; }
