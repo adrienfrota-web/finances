@@ -56,6 +56,18 @@
   .stat-card .v{ font-family:'IBM Plex Mono',monospace; font-size:15px; font-weight:600; white-space:nowrap; }
   .stat-card .l{ font-size:10.5px; color:var(--paper-dim); text-transform:uppercase; letter-spacing:.08em; margin-top:3px;}
 
+  /* ---------- NOTE ACCUEIL (Accueil!B12) ---------- */
+  .accueil-note{
+    margin:18px 24px 0;
+    padding:12px 14px;
+    background:rgba(201,162,39,0.07);
+    border:1px solid rgba(201,162,39,0.25);
+    border-radius:12px;
+    font-size:13px;
+    line-height:1.4;
+    color:var(--paper);
+  }
+
   /* ---------- ACCOUNTS ---------- */
   .section-title{
     padding:22px 24px 10px;

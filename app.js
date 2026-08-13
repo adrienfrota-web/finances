@@ -424,6 +424,11 @@ function renderComptesEcran(data) {
     bilanEl.textContent = fmtEUR(data.kpis.bilanAssentis);
     bilanEl.style.color = (bilanVal < 0) ? 'var(--coral)' : '';
 
+    const note = (data.note || '').trim();
+    document.getElementById('accueil-note-container').innerHTML = note
+      ? '<div class="accueil-note">' + escapeHtml_(note) + '</div>'
+      : '';
+
     let allocHtml = '';
     (data.allocation.lignes || []).forEach(function(l) {
       const pctNum = parseFloat(String(l.pct).replace('%','')) || 0;
