@@ -192,7 +192,7 @@ const CATEGORIES_REVENU = [
 const CATEGORIES_EPARGNE_GROUPES = {
   'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage'] },
   'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
-  'CTO — Actions': { icon:'📈', items:['MSCI World','Emerging Markets (CTO — Actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
+  'CTO — Actions': { icon:'📈', items:['MSCI ACWI','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
   'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
   'Or': { icon:'🥇', items:['CTO Or','Lingot or 20g'] }
 };
@@ -316,6 +316,7 @@ const ICONS = {
 
   // CTO
   "iShares Physical Gold ETC": "🥇",
+  "MSCI ACWI": "📈",  
   "Invexo MSCI World": "📈",
   "S&P 500 CTO": "📈",
   "Easy Stoxx 600 CTO": "📈",
