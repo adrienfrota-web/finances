@@ -160,7 +160,10 @@ const EMOJI_CATEGORIES = {
   'activités / loisirs': '🎨',
   'anniversaires / noël': '🎁',
   'mariages / évènements / invitations': '🎉',
-  'cni, courrier, fournitures, etc.': '🗂️'
+  'cni, courrier, fournitures, etc.': '🗂️',
+  'scpi iroko zen': '🏢',
+  'private equity eurazéo': '🚀',
+  'private equity nexstage': '🚀'
 };
 
 const CATEGORIES_DEPENSE_GROUPES = {
@@ -199,6 +202,21 @@ const CATEGORIES_EPARGNE_GROUPES = {
 
 function iconForCategorie(cat, fallback) {
   return EMOJI_CATEGORIES[normalizeCat_(cat)] || fallback || '➕';
+}
+
+// Retourne le même emoji que celui affiché sur la puce de la page "+" pour une
+// transaction donnée : priorité à l'icône spécifique de la catégorie
+// (EMOJI_CATEGORIES), sinon repli sur l'icône du groupe auquel elle appartient.
+function iconForTransaction(t) {
+  if (t.type === 'Revenu') {
+    return iconForCategorie(t.categorie, '➕');
+  }
+  const groupesSource = (t.type === 'Dépense') ? CATEGORIES_DEPENSE_GROUPES : CATEGORIES_EPARGNE_GROUPES;
+  const groupe = Object.keys(groupesSource).find(function(g) {
+    return groupesSource[g].items.some(function(i) { return i.toLowerCase() === (t.categorie || '').toLowerCase(); });
+  });
+  const fallback = groupe ? groupesSource[groupe].icon : '➕';
+  return iconForCategorie(t.categorie, fallback);
 }
 
 // ============================================================
@@ -794,7 +812,7 @@ function renderHistorique(hasMore) {
     const isDep = t.type === 'Dépense';
     const sign = isDep ? '−' : '+';
     const color = isDep ? 'var(--coral)' : (t.type === 'Épargne' ? 'var(--brass)' : 'var(--sage)');
-    const icone = isDep ? '💸' : (t.type === 'Épargne' ? '🐷' : '💶');
+    const icone = iconForTransaction(t);
     html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
         '<div class="acc-left"><div class="acc-icon">' + icone + '</div>' +
           '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
