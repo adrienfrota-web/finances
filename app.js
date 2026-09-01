@@ -163,7 +163,14 @@ const EMOJI_CATEGORIES = {
   'cni, courrier, fournitures, etc.': '🗂️',
   'scpi iroko zen': '🏢',
   'private equity eurazéo': '🚀',
-  'private equity nexstage': '🚀'
+  'private equity nexstage': '🚀',
+  'linxea spirit 2 - selma - physical gold': '🥇',
+  'linxea spirit 2 - selma - msci world energy': '📊',
+  'linxea spirit 2 - selma - msci world quality': '📊',
+  'linxea spirit 2 - selma - msci world value': '📊',
+  'linxea spirit 2 - selma - msci world equal weight': '📊',
+  'linxea spirit 2 - selma - msci world small caps': '📊',
+  'linxea spirit 2 - selma - listed private equity': '🚀'
 };
 
 const CATEGORIES_DEPENSE_GROUPES = {
@@ -193,7 +200,7 @@ const CATEGORIES_REVENU = [
 // cellule Budget!A130, nécessaire pour que les formules SUMIFS du Sheet (qui matchent sur
 // le texte exact de la colonne Catégorie des Transactions) retrouvent bien cette ligne.
 const CATEGORIES_EPARGNE_GROUPES = {
-  'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage'] },
+  'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage','Linxea Spirit 2 - Selma - Physical Gold','Linxea Spirit 2 - Selma - MSCI World Energy','Linxea Spirit 2 - Selma - MSCI World Quality','Linxea Spirit 2 - Selma - MSCI World Value','Linxea Spirit 2 - Selma - MSCI World Equal Weight','Linxea Spirit 2 - Selma - MSCI World Small Caps','Linxea Spirit 2 - Selma - Listed Private Equity'] },
   'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
   'CTO — Actions': { icon:'📈', items:['MSCI ACWI','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
   'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
