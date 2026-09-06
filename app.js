@@ -944,3 +944,87 @@ function toggleBudgetGroupe(idx) {
   const el = document.getElementById('budget-detail-' + idx);
   el.style.display = (el.style.display === 'none') ? '' : 'none';
 }
+
+// ============================================================
+// NAVIGATION PAR GLISSEMENT (SWIPE) TACTILE
+// Glisser vers la gauche → écran suivant, vers la droite → écran précédent,
+// dans l'ordre visuel de la barre de navigation basse.
+// L'écran "screen-detail" (drill-down patrimoine) n'en fait pas partie :
+// seul un glissement vers la droite y ramène à "Comptes" (geste retour classique).
+// ============================================================
+const SWIPE_ECRANS_ORDRE = ['screen-comptes', 'screen-historique', 'screen-saisie', 'screen-objectifs', 'screen-budget'];
+const SWIPE_SEUIL_DISTANCE_PX = 60;   // distance horizontale minimale pour valider le geste
+const SWIPE_SEUIL_TEMPS_MS = 600;     // durée maximale du geste
+const SWIPE_RATIO_HORIZONTAL_MIN = 1.5; // le geste doit être nettement plus horizontal que vertical
+
+function ecranActifId_() {
+  const actif = document.querySelector('.screen.active');
+  return actif ? actif.id : null;
+}
+
+function allerVersEcranAdjacent_(direction) {
+  // direction : 1 = écran suivant (glissement vers la gauche), -1 = écran précédent (glissement vers la droite)
+  const idActuel = ecranActifId_();
+  if (!idActuel) return;
+
+  if (idActuel === 'screen-detail') {
+    if (direction === -1) showScreen('screen-comptes');
+    return;
+  }
+
+  const index = SWIPE_ECRANS_ORDRE.indexOf(idActuel);
+  if (index === -1) return;
+  const nouvelIndex = index + direction;
+  if (nouvelIndex < 0 || nouvelIndex >= SWIPE_ECRANS_ORDRE.length) return; // déjà au bord, rien à faire
+
+  const nouvelEcranId = SWIPE_ECRANS_ORDRE[nouvelIndex];
+  if (nouvelEcranId === 'screen-saisie') {
+    nouvelleSaisie();
+  } else {
+    const btn = document.querySelector('.nav-item[data-screen="' + nouvelEcranId + '"]');
+    navTo(nouvelEcranId, btn);
+  }
+}
+
+function initSwipeNavigation_() {
+  const zone = document.querySelector('.device');
+  if (!zone) return;
+
+  let departX = 0, departY = 0, departTemps = 0, glissementActif = false;
+
+  zone.addEventListener('touchstart', function(e) {
+    if (e.touches.length !== 1) { glissementActif = false; return; }
+    // On ignore le geste s'il démarre dans une zone à défilement horizontal propre
+    // (carrousel de catégories) ou dans un champ de saisie, pour ne pas les court-circuiter.
+    if (e.target.closest && e.target.closest('.chip-scroll, input, select, textarea')) {
+      glissementActif = false;
+      return;
+    }
+    departX = e.touches[0].clientX;
+    departY = e.touches[0].clientY;
+    departTemps = Date.now();
+    glissementActif = true;
+  }, { passive: true });
+
+  zone.addEventListener('touchend', function(e) {
+    if (!glissementActif) return;
+    glissementActif = false;
+
+    const arrivee = e.changedTouches[0];
+    const deltaX = arrivee.clientX - departX;
+    const deltaY = arrivee.clientY - departY;
+    const deltaTemps = Date.now() - departTemps;
+
+    if (deltaTemps > SWIPE_SEUIL_TEMPS_MS) return;
+    if (Math.abs(deltaX) < SWIPE_SEUIL_DISTANCE_PX) return;
+    if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_RATIO_HORIZONTAL_MIN) return;
+
+    if (deltaX < 0) {
+      allerVersEcranAdjacent_(1);  // glissement vers la gauche → écran suivant
+    } else {
+      allerVersEcranAdjacent_(-1); // glissement vers la droite → écran précédent
+    }
+  }, { passive: true });
+}
+
+initSwipeNavigation_();
