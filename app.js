@@ -442,9 +442,9 @@ function renderComptesEcran(data) {
     document.getElementById('valeur-nette').innerHTML = fmtEUR(data.kpis.valeurNette).replace(' €','') + ' <sup>€</sup>';
     document.getElementById('liquidites').textContent = fmtEUR(data.kpis.liquidites);
     document.getElementById('taux-epargne').textContent = data.kpis.tauxEpargne || '—';
-    const bilanEl = document.getElementById('bilan-assentis');
-    const bilanVal = Number(data.kpis.bilanAssentis);
-    bilanEl.textContent = fmtEUR(data.kpis.bilanAssentis);
+    const bilanEl = document.getElementById('traindevie');
+    const bilanVal = Number(data.kpis.traindevie);
+    bilanEl.textContent = fmtEUR(data.kpis.traindevie);
     bilanEl.style.color = (bilanVal < 0) ? 'var(--coral)' : '';
 
     const note = (data.note || '').trim();
