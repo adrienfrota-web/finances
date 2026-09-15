@@ -267,7 +267,7 @@ function fmtEUR2(v) {
 
 const ICONS = {
   // Catégories
-  "Liquidités": "🏦",
+  "Cash": "💵",
   "Livrets (hors LEP)": "📘",
   "LEP": "📙",
   "Fonds €": "🛡️",
