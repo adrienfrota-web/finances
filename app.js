@@ -160,14 +160,7 @@ const EMOJI_CATEGORIES = {
   'activités / loisirs': '🎨',
   'anniversaires / noël': '🎁',
   'mariages / évènements / invitations': '🎉',
-  'cni, courrier, fournitures, etc.': '🗂️',
-  'scpi iroko zen': '🏢',
-  'private equity eurazéo': '🚀',
-  'private equity nexstage': '🚀',
-  'linxea - physical gold': '🥇',
-  'linxea - msci world equal weight': '📊',
-  'linxea - msci world small caps': '📊',
-  'linxea - listed private equity': '🚀'
+  'cni, courrier, fournitures, etc.': '🗂️'
 };
 
 const CATEGORIES_DEPENSE_GROUPES = {
@@ -197,30 +190,15 @@ const CATEGORIES_REVENU = [
 // cellule Budget!A130, nécessaire pour que les formules SUMIFS du Sheet (qui matchent sur
 // le texte exact de la colonne Catégorie des Transactions) retrouvent bien cette ligne.
 const CATEGORIES_EPARGNE_GROUPES = {
-  'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage','Linxea - Physical Gold','Linxea - MSCI World Equal Weight','Linxea - MSCI World Small Caps','Linxea - Listed Private Equity'] },
+  'Assurances-vie': { icon:'🛡️', items:['Fonds euros (Cardif Lucya)','Fonds euros (Linxea Spirit 2)','SCPI Iroko Zen','Private Equity Eurazéo','Private Equity Nexstage'] },
   'PEA': { icon:'📊', items:['S&P 500 (PEA)','Stoxx 600 (PEA)','Topix (PEA)','Emerging Markets (PEA)','MSCI EMU Small Cap'] },
-  'CTO — Actions': { icon:'📈', items:['MSCI ACWI','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
+  'CTO — Actions': { icon:'📈', items:['MSCI World','Emerging Markets (CTO — Actions)','MSCI World Energy','Edge World Quality','MSCI World Small Caps','LPX Private Equity'] },
   'CTO — Obligations': { icon:'📜', items:['Global Aggregate Bond','€ Corp Bond ','Corp Bond High Yield','€ inflat° linked Gov Bond'] },
   'Or': { icon:'🥇', items:['CTO Or','Lingot or 20g'] }
 };
 
 function iconForCategorie(cat, fallback) {
   return EMOJI_CATEGORIES[normalizeCat_(cat)] || fallback || '➕';
-}
-
-// Retourne le même emoji que celui affiché sur la puce de la page "+" pour une
-// transaction donnée : priorité à l'icône spécifique de la catégorie
-// (EMOJI_CATEGORIES), sinon repli sur l'icône du groupe auquel elle appartient.
-function iconForTransaction(t) {
-  if (t.type === 'Revenu') {
-    return iconForCategorie(t.categorie, '➕');
-  }
-  const groupesSource = (t.type === 'Dépense') ? CATEGORIES_DEPENSE_GROUPES : CATEGORIES_EPARGNE_GROUPES;
-  const groupe = Object.keys(groupesSource).find(function(g) {
-    return groupesSource[g].items.some(function(i) { return i.toLowerCase() === (t.categorie || '').toLowerCase(); });
-  });
-  const fallback = groupe ? groupesSource[groupe].icon : '➕';
-  return iconForCategorie(t.categorie, fallback);
 }
 
 // ============================================================
@@ -338,7 +316,6 @@ const ICONS = {
 
   // CTO
   "iShares Physical Gold ETC": "🥇",
-  "MSCI ACWI": "📈",  
   "Invexo MSCI World": "📈",
   "S&P 500 CTO": "📈",
   "Easy Stoxx 600 CTO": "📈",
@@ -442,10 +419,7 @@ function renderComptesEcran(data) {
     document.getElementById('valeur-nette').innerHTML = fmtEUR(data.kpis.valeurNette).replace(' €','') + ' <sup>€</sup>';
     document.getElementById('liquidites').textContent = fmtEUR(data.kpis.liquidites);
     document.getElementById('taux-epargne').textContent = data.kpis.tauxEpargne || '—';
-    const bilanEl = document.getElementById('traindevie');
-    const bilanVal = Number(data.kpis.traindevie);
-    bilanEl.textContent = fmtEUR(data.kpis.traindevie);
-    bilanEl.style.color = (bilanVal < 0) ? 'var(--coral)' : '';
+    document.getElementById('train-de-vie').textContent = fmtEUR(data.kpis.trainDeVie);
 
     const note = (data.note || '').trim();
     document.getElementById('accueil-note-container').innerHTML = note
@@ -816,7 +790,7 @@ function renderHistorique(hasMore) {
     const isDep = t.type === 'Dépense';
     const sign = isDep ? '−' : '+';
     const color = isDep ? 'var(--coral)' : (t.type === 'Épargne' ? 'var(--brass)' : 'var(--sage)');
-    const icone = iconForTransaction(t);
+    const icone = isDep ? '💸' : (t.type === 'Épargne' ? '🐷' : '💶');
     html += '<div class="account-row" style="cursor:pointer" onclick="ouvrirEditionTransaction(\'' + t.row + '\')">' +
         '<div class="acc-left"><div class="acc-icon">' + icone + '</div>' +
           '<div><div class="acc-name">' + t.categorie + '</div><div class="acc-sub">' + t.date + (t.note ? ' · ' + t.note : '') + '</div></div></div>' +
@@ -944,87 +918,3 @@ function toggleBudgetGroupe(idx) {
   const el = document.getElementById('budget-detail-' + idx);
   el.style.display = (el.style.display === 'none') ? '' : 'none';
 }
-
-// ============================================================
-// NAVIGATION PAR GLISSEMENT (SWIPE) TACTILE
-// Glisser vers la gauche → écran suivant, vers la droite → écran précédent,
-// dans l'ordre visuel de la barre de navigation basse.
-// L'écran "screen-detail" (drill-down patrimoine) n'en fait pas partie :
-// seul un glissement vers la droite y ramène à "Comptes" (geste retour classique).
-// ============================================================
-const SWIPE_ECRANS_ORDRE = ['screen-comptes', 'screen-historique', 'screen-saisie', 'screen-objectifs', 'screen-budget'];
-const SWIPE_SEUIL_DISTANCE_PX = 60;   // distance horizontale minimale pour valider le geste
-const SWIPE_SEUIL_TEMPS_MS = 600;     // durée maximale du geste
-const SWIPE_RATIO_HORIZONTAL_MIN = 1.5; // le geste doit être nettement plus horizontal que vertical
-
-function ecranActifId_() {
-  const actif = document.querySelector('.screen.active');
-  return actif ? actif.id : null;
-}
-
-function allerVersEcranAdjacent_(direction) {
-  // direction : 1 = écran suivant (glissement vers la gauche), -1 = écran précédent (glissement vers la droite)
-  const idActuel = ecranActifId_();
-  if (!idActuel) return;
-
-  if (idActuel === 'screen-detail') {
-    if (direction === -1) showScreen('screen-comptes');
-    return;
-  }
-
-  const index = SWIPE_ECRANS_ORDRE.indexOf(idActuel);
-  if (index === -1) return;
-  const nouvelIndex = index + direction;
-  if (nouvelIndex < 0 || nouvelIndex >= SWIPE_ECRANS_ORDRE.length) return; // déjà au bord, rien à faire
-
-  const nouvelEcranId = SWIPE_ECRANS_ORDRE[nouvelIndex];
-  if (nouvelEcranId === 'screen-saisie') {
-    nouvelleSaisie();
-  } else {
-    const btn = document.querySelector('.nav-item[data-screen="' + nouvelEcranId + '"]');
-    navTo(nouvelEcranId, btn);
-  }
-}
-
-function initSwipeNavigation_() {
-  const zone = document.querySelector('.device');
-  if (!zone) return;
-
-  let departX = 0, departY = 0, departTemps = 0, glissementActif = false;
-
-  zone.addEventListener('touchstart', function(e) {
-    if (e.touches.length !== 1) { glissementActif = false; return; }
-    // On ignore le geste s'il démarre dans une zone à défilement horizontal propre
-    // (carrousel de catégories) ou dans un champ de saisie, pour ne pas les court-circuiter.
-    if (e.target.closest && e.target.closest('.chip-scroll, input, select, textarea')) {
-      glissementActif = false;
-      return;
-    }
-    departX = e.touches[0].clientX;
-    departY = e.touches[0].clientY;
-    departTemps = Date.now();
-    glissementActif = true;
-  }, { passive: true });
-
-  zone.addEventListener('touchend', function(e) {
-    if (!glissementActif) return;
-    glissementActif = false;
-
-    const arrivee = e.changedTouches[0];
-    const deltaX = arrivee.clientX - departX;
-    const deltaY = arrivee.clientY - departY;
-    const deltaTemps = Date.now() - departTemps;
-
-    if (deltaTemps > SWIPE_SEUIL_TEMPS_MS) return;
-    if (Math.abs(deltaX) < SWIPE_SEUIL_DISTANCE_PX) return;
-    if (Math.abs(deltaX) < Math.abs(deltaY) * SWIPE_RATIO_HORIZONTAL_MIN) return;
-
-    if (deltaX < 0) {
-      allerVersEcranAdjacent_(1);  // glissement vers la gauche → écran suivant
-    } else {
-      allerVersEcranAdjacent_(-1); // glissement vers la droite → écran précédent
-    }
-  }, { passive: true });
-}
-
-initSwipeNavigation_();
