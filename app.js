@@ -290,8 +290,7 @@ function fmtEUR2(v) {
 const ICONS = {
   // Catégories
   "Liquidités": "🏦",
-  "Livrets (hors LEP)": "📘",
-  "LEP": "📙",
+  "Livrets": "📘",
   "Fonds €": "🛡️",
   "Or": "🥇",
   "SCPI": "🏢",
@@ -317,7 +316,6 @@ const ICONS = {
   "BNP Livret A Selma": "📘",
   "BNP Livret A Adrien": "📘",
   "BNP LDDS Adrien": "📘",
-  "BNP LEP Adrien": "📙",
   "Bourso CSL Jeune Raphaël": "📘",
 
   // Assurance-vie
